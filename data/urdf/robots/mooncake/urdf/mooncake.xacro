@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<robot name="mooncake"
+	xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="w" value="${size.split()[0]}"/>
+		<xacro:property name="d" value="${size.split()[1]}"/>
+		<xacro:property name="h" value="${size.split()[2]}"/>
+		<xacro:property name="mass" value="${rho*w*d*h}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(mass/12)*(h**2 + d**2)}" iyy="${(mass/12)*(w**2 + h**2)}" izz="${(mass/12)*(w**2 + d**2)}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="inertial_cylinder" params="length radius rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="mass" value="${rho*pi*length*radius**2}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(mass/12)*(3*radius**2 + length**2)}" iyy="${(mass/12)*(3*radius**2 + length**2)}" izz="${(mass/2)*radius**2}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="inertial_sphere" params="radius rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="mass" value="${4/3*rho*pi*radius**3}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(2/5*mass)*(radius**2)}" iyy="${(2/5*mass)*(radius**2)}" izz="${(2/5*mass)*(radius**2)}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="collision_cylinder" params="length radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<cylinder length="${length}" radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_capsule" params="length radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<capsule length="${length}" radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_box" params="size xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<box size="${size}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_sphere" params="radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<sphere radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+
+	<xacro:macro name="pillar" params="xyz rpy num">
+		<link name="pillar_${num}">
+			<visual>
+				<geometry>
+					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+				</geometry>
+			</visual>
+			<xacro:collision_box size="0.0225 0.006 0.174"/>
+			<xacro:inertial_box size="0.0225 0.006 0.174" rho="1212"/>
+		</link>
+		<joint name="pillar_${num}_joint" type="fixed">
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<parent link="base_plate"/>
+			<child link="pillar_${num}"/>
+		</joint>
+	</xacro:macro>
+
+    <xacro:macro name="pillars" params="num">
+		<!--Angle from center-->
+		<xacro:property name="angle" value="${num*(pi/3)}"/>
+		<!--Radius from center-->
+		<xacro:property name="r" value="0.13125"/>
+		<!--Z offset-->
+		<xacro:property name="z" value="0.08425"/>
+		<!--Left/Right offset-->
+		<xacro:property name="d" value="0.022"/>
+		<!--X offset-->
+		<xacro:property name="x" value="${cos(angle)*r}"/>
+		<!--Y offset-->
+		<xacro:property name="y" value="${sin(angle)*r}"/>
+		<!--Left pillar-->
+		<xacro:pillar xyz="${x+cos(angle+pi/2)*d} ${y+sin(angle+pi/2)*d} ${z}" rpy="0 0 ${angle}" num="${2*num}"/>
+		<!--Right pillar-->
+		<xacro:pillar xyz="${x+cos(angle-pi/2)*d} ${y+sin(angle-pi/2)*d} ${z}" rpy="0 0 ${angle}" num="${2*num+1}"/>
+	</xacro:macro>
+	
+	<xacro:macro name="roller" params="wheel_num num side">
+		<!-- Number of roller per plate -->
+		<xacro:property name="n_roller" value="9"/>
+		<!-- Radius of the sphere used for the roller -->
+		<xacro:property name="roller_radius" value="0.0095"/>
+		<!-- Distance from center of wheel to the roller rotation axis -->
+		<xacro:property name="roller_axis_offset" value="0.042"/>
+		<!-- Distance from center of wheel to the each side of plate -->
+		<xacro:property name="plate_offset" value="0.01438"/>
+		<!-- Angle of each roller -->
+		<xacro:property name="angle" value="${2*pi/n_roller*(num+(side*0.5))}"/>
+				
+		<link name="roller_${wheel_num}_${side}_${num}">
+			<xacro:collision_sphere xyz="0 0 0" radius="${roller_radius}"/>
+			<xacro:inertial_sphere rho="1000" rpy="0 0 0" radius="${roller_radius}"/>
+		</link>
+		<joint name="roller_${wheel_num}_${side}_${num}_joint" type="continuous">
+			<origin xyz="${sin(angle)*roller_axis_offset} ${cos(angle)*roller_axis_offset} ${(side-0.5)*2*plate_offset}" rpy="0 0 ${-angle}"/>
+			<axis xyz="1 0 0"/>
+			<parent link="wheel_${wheel_num}"/>
+			<child link="roller_${wheel_num}_${side}_${num}"/>
+		</joint>
+	</xacro:macro>
+	<xacro:macro name="omni_wheel" params="num">
+		<!--Z-offset-->
+		<xacro:property name="z" value="-0.10666"/>
+		<!--Number of roller per plate -->
+		<xacro:property name="n_roller" value="9"/>
+		<link name="wheel_${num}">
+			<visual>
+				<geometry>
+					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/omni_wheel.dae" scale="1 1 1"/>
+				</geometry>
+			</visual>
+			<xacro:inertial_cylinder rho="1334.33" length="0.02876" radius="0.05"/>
+		</link>
+		<joint name="wheel_${num}_joint" type="continuous">
+			<origin xyz="0 0 ${z}" rpy="0 0 0"/>
+			<axis xyz="0 0 1"/>
+			<parent link="motor_${num}"/>
+			<child link="wheel_${num}"/>
+		</joint>
+		<xacro:roller wheel_num="${num}" num="0" side="0"/>
+		<xacro:roller wheel_num="${num}" num="1" side="0"/>
+		<xacro:roller wheel_num="${num}" num="2" side="0"/>
+		<xacro:roller wheel_num="${num}" num="3" side="0"/>
+		<xacro:roller wheel_num="${num}" num="4" side="0"/>
+		<xacro:roller wheel_num="${num}" num="5" side="0"/>
+		<xacro:roller wheel_num="${num}" num="6" side="0"/>
+		<xacro:roller wheel_num="${num}" num="7" side="0"/>
+		<xacro:roller wheel_num="${num}" num="8" side="0"/>
+		<xacro:roller wheel_num="${num}" num="0" side="1"/>
+		<xacro:roller wheel_num="${num}" num="1" side="1"/>
+		<xacro:roller wheel_num="${num}" num="2" side="1"/>
+		<xacro:roller wheel_num="${num}" num="3" side="1"/>
+		<xacro:roller wheel_num="${num}" num="4" side="1"/>
+		<xacro:roller wheel_num="${num}" num="5" side="1"/>
+		<xacro:roller wheel_num="${num}" num="6" side="1"/>
+		<xacro:roller wheel_num="${num}" num="7" side="1"/>
+		<xacro:roller wheel_num="${num}" num="8" side="1"/>
+		
+	</xacro:macro>
+
+	<xacro:macro name="motor_assembly" params="num angle">
+		<!--Angle between base and motor (50 degree from floor)-->
+		<xacro:property name="motor_angle" value="${5*pi/18}"/>
+		<!--Extended radius from center (referenced to each motor mount)-->
+		<xacro:property name="delta_r" value="${0.025-0.025*sin(motor_angle)-0.055*cos(motor_angle)}"/>
+		<!--Z-offset referenced to motor mount-->
+		<xacro:property name="delta_z" value="${-0.02-0.025*cos(motor_angle)+0.055*sin(motor_angle)}"/>
+		<link name="motor_${num}">
+			<visual>
+				<geometry>
+					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/ZGX38REE.dae" scale="1 1 1"/>
+				</geometry>
+			</visual>
+			<xacro:collision_cylinder length="0.110" radius="0.019"/>
+			<xacro:inertial_cylinder rho="4925" length="0.110" radius="0.019"/>
+		</link>
+		<joint name="motor_${num}_joint" type="fixed">
+			<origin xyz="${delta_r} 0 ${delta_z}" rpy="0 ${-motor_angle} 0"/>
+			<parent link="motor_mount_${num}"/>
+			<child link="motor_${num}"/>
+		</joint>
+		<xacro:omni_wheel num="${num}"/>
+	</xacro:macro>
+
+	<xacro:macro name="motor_mount_assembly" params="num">
+		<!--Angle from center-->
+		<xacro:property name="angle" value="${(num-1.5)*(2*pi/3)}"/>
+		<!--Radius from center-->
+		<xacro:property name="r" value="0.095"/>
+		<link name="motor_mount_${num}">
+			<visual>
+				<geometry>
+					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/motor_mount.dae" scale="1 1 1"/>
+				</geometry>
+			</visual>
+		</link>
+		<joint name="motor_mount_${num}_joint" type="fixed">
+			<origin xyz="${cos(angle)*r} ${sin(angle)*r} 0" rpy="0 0 ${angle}"/>
+			<parent link="base_plate"/>
+			<child link="motor_mount_${num}"/>
+		</joint>
+		<!--Motor-->
+		<xacro:motor_assembly num="${num}" angle="${angle}"/>
+		
+	</xacro:macro>
+
+
+	<!--Lower plate-->
+	<link name="base_plate">
+		<visual>
+			<geometry>
+				<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/lower_plate.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+		<xacro:collision_cylinder length="0.006" radius="0.15" xyz="0 0 0"/>
+		<xacro:inertial_cylinder rho="1212" length="0.006" radius="0.15" xyz="0 0 0"/>
+
+		<!-- <xacro:collision_cylinder length="0.1745" radius="0.15" xyz="0 0 0.08425"/> -->
+	</link>
+	<!--Upper plate-->
+	<link name="upper_plate">
+		<visual>
+			<geometry>
+				<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/upper_plate.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+		<xacro:collision_cylinder length="0.006" radius="0.15" xyz="0 0 0"/>
+		<xacro:inertial_cylinder rho="1212" length="0.006" radius="0.15" xyz="0 0 0"/>
+	</link>
+	<joint name="upper_plate_joint" type="fixed">
+		<origin xyz="0 0 0.1685"/>
+		<parent link="base_plate"/>
+		<child link="upper_plate"/>
+	</joint>
+	<!--Pillars-->
+	<xacro:pillars num="0"/>
+	<xacro:pillars num="1"/>
+	<xacro:pillars num="2"/>
+	<xacro:pillars num="3"/>
+	<xacro:pillars num="4"/>
+	<xacro:pillars num="5"/>
+	<!--Motor Mount-->
+	<xacro:motor_mount_assembly num="0"/>
+	<xacro:motor_mount_assembly num="1"/>
+	<xacro:motor_mount_assembly num="2"/>
+	
+</robot>

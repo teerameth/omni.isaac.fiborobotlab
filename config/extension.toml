@@ -1,0 +1,45 @@
+[core]
+reloadable = true
+order = 0
+
+[package]
+version = "0.1.1"
+category = "Simulation"
+title = "Isaac Sim fiborobotlab"
+description = "fiborobotlab package for Isaac Sim"
+authors = ["NVIDIA"]
+repository = ""
+keywords = ["isaac", "urdf", "import"]
+changelog = "docs/CHANGELOG.md"
+readme = "docs/README.md"
+preview_image = "data/preview.png"
+icon = "data/icon.png"
+writeTarget.kit = true
+
+[dependencies]
+"omni.isaac.urdf" = {} 
+
+[[python.module]]
+name = "omni.isaac.fiborobotlab"
+
+#[[python.module]]
+#name = "omni.isaac.fiborobotlab.mooncake"
+
+[[python.module]]
+name = "omni.isaac.fiborobotlab.mooncake.scripts.import_mooncake"
+
+[[python.module]]
+name = "omni.isaac.fiborobotlab.hello_world_extension"
+
+[[python.module]]
+name = "omni.isaac.fiborobotlab.hello_world"
+
+[[native.plugin]]
+path = "bin/*.plugin"
+recursive = false
+
+
+[[test]]
+# this is to catch issues where our assimp is out of sync with the one that comes with 
+# asset importer as this can cause segfaults due to binary incompatibility. 
+dependencies = ["omni.kit.tool.asset_importer"]
