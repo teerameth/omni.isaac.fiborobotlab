@@ -8,7 +8,7 @@
   <link name="base_plate">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/lower_plate.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/lower_plate.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -28,7 +28,7 @@
   <link name="upper_plate">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/upper_plate.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/upper_plate.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -51,7 +51,7 @@
   <link name="pillar_0">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -74,7 +74,7 @@
   <link name="pillar_1">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -97,7 +97,7 @@
   <link name="pillar_2">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -120,7 +120,7 @@
   <link name="pillar_3">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -143,7 +143,7 @@
   <link name="pillar_4">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -166,7 +166,7 @@
   <link name="pillar_5">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -189,7 +189,7 @@
   <link name="pillar_6">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -212,7 +212,7 @@
   <link name="pillar_7">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -235,7 +235,7 @@
   <link name="pillar_8">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -258,7 +258,7 @@
   <link name="pillar_9">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -281,7 +281,7 @@
   <link name="pillar_10">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -304,7 +304,7 @@
   <link name="pillar_11">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -327,7 +327,7 @@
   <link name="motor_mount_0">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/motor_mount.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
@@ -339,7 +339,7 @@
   <link name="motor_0">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/ZGX38REE.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/ZGX38REE.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -362,7 +362,7 @@
   <link name="wheel_0">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/omni_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/omni_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -722,7 +722,7 @@
   <link name="motor_mount_1">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/motor_mount.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
@@ -734,7 +734,7 @@
   <link name="motor_1">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/ZGX38REE.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/ZGX38REE.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -757,7 +757,7 @@
   <link name="wheel_1">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/omni_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/omni_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -1117,7 +1117,7 @@
   <link name="motor_mount_2">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/motor_mount.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
       </geometry>
     </visual>
   </link>
@@ -1129,7 +1129,7 @@
   <link name="motor_2">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/ZGX38REE.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/ZGX38REE.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <collision>
@@ -1152,7 +1152,7 @@
   <link name="wheel_2">
     <visual>
       <geometry>
-        <mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/omni_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/omni_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>

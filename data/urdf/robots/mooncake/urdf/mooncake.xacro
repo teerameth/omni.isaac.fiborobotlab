@@ -65,7 +65,7 @@
 		<link name="pillar_${num}">
 			<visual>
 				<geometry>
-					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/pillar.dae" scale="1 1 1"/>
+					<mesh filename="package://meshes/pillar.dae" scale="1 1 1"/>
 				</geometry>
 			</visual>
 			<xacro:collision_box size="0.0225 0.006 0.174"/>
@@ -128,7 +128,7 @@
 		<link name="wheel_${num}">
 			<visual>
 				<geometry>
-					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/omni_wheel.dae" scale="1 1 1"/>
+					<mesh filename="package://meshes/omni_wheel.dae" scale="1 1 1"/>
 				</geometry>
 			</visual>
 			<xacro:inertial_cylinder rho="1334.33" length="0.02876" radius="0.05"/>
@@ -170,7 +170,7 @@
 		<link name="motor_${num}">
 			<visual>
 				<geometry>
-					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/ZGX38REE.dae" scale="1 1 1"/>
+					<mesh filename="package://meshes/ZGX38REE.dae" scale="1 1 1"/>
 				</geometry>
 			</visual>
 			<xacro:collision_cylinder length="0.110" radius="0.019"/>
@@ -192,7 +192,7 @@
 		<link name="motor_mount_${num}">
 			<visual>
 				<geometry>
-					<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/motor_mount.dae" scale="1 1 1"/>
+					<mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
 				</geometry>
 			</visual>
 		</link>
@@ -211,7 +211,7 @@
 	<link name="base_plate">
 		<visual>
 			<geometry>
-				<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/lower_plate.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/lower_plate.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:collision_cylinder length="0.006" radius="0.15" xyz="0 0 0"/>
@@ -223,7 +223,7 @@
 	<link name="upper_plate">
 		<visual>
 			<geometry>
-				<mesh filename="/media/teera/ROGESD/urdf/robots/mooncake/meshes/upper_plate.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/upper_plate.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:collision_cylinder length="0.006" radius="0.15" xyz="0 0 0"/>

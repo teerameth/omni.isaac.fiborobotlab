@@ -5,13 +5,13 @@
       <author>Blender User</author>
       <authoring_tool>Blender 3.1.2 commit date:2022-03-31, commit time:17:40, hash:cc66d1020c3b</authoring_tool>
     </contributor>
-    <created>2022-05-15T04:07:44</created>
-    <modified>2022-05-15T04:07:44</modified>
+    <created>2022-05-17T06:50:39</created>
+    <modified>2022-05-17T06:50:39</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
   <library_effects>
-    <effect id="Material-effect">
+    <effect id="BlueAcrylic-effect">
       <profile_COMMON>
         <technique sid="common">
           <lambert>
@@ -31,8 +31,8 @@
   </library_effects>
   <library_images/>
   <library_materials>
-    <material id="Material-material" name="Material">
-      <instance_effect url="#Material-effect"/>
+    <material id="BlueAcrylic-material" name="BlueAcrylic">
+      <instance_effect url="#BlueAcrylic-effect"/>
     </material>
   </library_materials>
   <library_geometries>
@@ -70,7 +70,7 @@
         <vertices id="Cylinder-mesh-vertices">
           <input semantic="POSITION" source="#Cylinder-mesh-positions"/>
         </vertices>
-        <triangles material="Material-material" count="2820">
+        <triangles material="BlueAcrylic-material" count="2820">
           <input semantic="VERTEX" source="#Cylinder-mesh-vertices" offset="0"/>
           <input semantic="NORMAL" source="#Cylinder-mesh-normals" offset="1"/>
           <input semantic="TEXCOORD" source="#Cylinder-mesh-map-0" offset="2" set="0"/>
@@ -86,7 +86,7 @@
         <instance_geometry url="#Cylinder-mesh" name="upper_plate">
           <bind_material>
             <technique_common>
-              <instance_material symbol="Material-material" target="#Material-material">
+              <instance_material symbol="BlueAcrylic-material" target="#BlueAcrylic-material">
                 <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
               </instance_material>
             </technique_common>

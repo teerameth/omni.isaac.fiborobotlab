@@ -5,13 +5,13 @@
       <author>Blender User</author>
       <authoring_tool>Blender 3.1.2 commit date:2022-03-31, commit time:17:40, hash:cc66d1020c3b</authoring_tool>
     </contributor>
-    <created>2022-05-15T04:09:18</created>
-    <modified>2022-05-15T04:09:18</modified>
+    <created>2022-05-17T06:50:13</created>
+    <modified>2022-05-17T06:50:13</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
   <library_effects>
-    <effect id="Material-effect">
+    <effect id="PurpleAcrylic-effect">
       <profile_COMMON>
         <technique sid="common">
           <lambert>
@@ -19,7 +19,7 @@
               <color sid="emission">0 0 0 1</color>
             </emission>
             <diffuse>
-              <color sid="diffuse">0.1003571 0.07130377 0.8000001 1</color>
+              <color sid="diffuse">0.1313581 0.0651046 0.8000001 1</color>
             </diffuse>
             <index_of_refraction>
               <float sid="ior">1.45</float>
@@ -31,8 +31,8 @@
   </library_effects>
   <library_images/>
   <library_materials>
-    <material id="Material-material" name="Material">
-      <instance_effect url="#Material-effect"/>
+    <material id="PurpleAcrylic-material" name="PurpleAcrylic">
+      <instance_effect url="#PurpleAcrylic-effect"/>
     </material>
   </library_materials>
   <library_geometries>
@@ -70,7 +70,7 @@
         <vertices id="Cube_002-mesh-vertices">
           <input semantic="POSITION" source="#Cube_002-mesh-positions"/>
         </vertices>
-        <triangles material="Material-material" count="36">
+        <triangles material="PurpleAcrylic-material" count="36">
           <input semantic="VERTEX" source="#Cube_002-mesh-vertices" offset="0"/>
           <input semantic="NORMAL" source="#Cube_002-mesh-normals" offset="1"/>
           <input semantic="TEXCOORD" source="#Cube_002-mesh-map-0" offset="2" set="0"/>
@@ -86,7 +86,7 @@
         <instance_geometry url="#Cube_002-mesh" name="pillar">
           <bind_material>
             <technique_common>
-              <instance_material symbol="Material-material" target="#Material-material">
+              <instance_material symbol="PurpleAcrylic-material" target="#PurpleAcrylic-material">
                 <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
               </instance_material>
             </technique_common>
