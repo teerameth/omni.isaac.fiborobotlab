@@ -160,28 +160,6 @@ class Extension(omni.ext.IExt):
                         api_prefix="drive",
                         multiple_api_token="angular",
                     )
-        # for axle in range(0, 2 + 1):
-        #     for ring in range(0, 1 + 1):
-        #         for roller in range(0, 4 + 1):
-        #             prim_path = (
-        #                 "/mooncake/axle_"
-        #                 + str(axle)
-        #                 + "/roller_"
-        #                 + str(axle)
-        #                 + "_"
-        #                 + str(ring)
-        #                 + "_"
-        #                 + str(roller)
-        #                 + "_joint"
-        #             )
-        #             prim = stage.GetPrimAtPath(prim_path)
-        #             omni.kit.commands.execute(
-        #                 "UnapplyAPISchemaCommand",
-        #                 api=UsdPhysics.DriveAPI,
-        #                 prim=prim,
-        #                 api_prefix="drive",
-        #                 multiple_api_token="angular",
-        #             )
 
     def _on_config_drives(self):
         # self._on_config_robot()  # make sure drives are configured first

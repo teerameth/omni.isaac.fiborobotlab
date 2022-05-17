@@ -162,7 +162,7 @@
 
 	<xacro:macro name="motor_assembly" params="num angle">
 		<!--Angle between base and motor (50 degree from floor)-->
-		<xacro:property name="motor_angle" value="${5*pi/18}"/>
+		<xacro:property name="motor_angle" value="${4*pi/18}"/>
 		<!--Extended radius from center (referenced to each motor mount)-->
 		<xacro:property name="delta_r" value="${0.025-0.025*sin(motor_angle)-0.055*cos(motor_angle)}"/>
 		<!--Z-offset referenced to motor mount-->

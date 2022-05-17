@@ -355,7 +355,7 @@
     </inertial>
   </link>
   <joint name="motor_0_joint" type="fixed">
-    <origin rpy="0 -0.8726646259971648 0" xyz="-0.029504429610734115 0 0.006062754129380309"/>
+    <origin rpy="0 -0.6981317007977318 0" xyz="-0.033202134613707274 0 -0.003797792545214791"/>
     <parent link="motor_mount_0"/>
     <child link="motor_0"/>
   </joint>
@@ -750,7 +750,7 @@
     </inertial>
   </link>
   <joint name="motor_1_joint" type="fixed">
-    <origin rpy="0 -0.8726646259971648 0" xyz="-0.029504429610734115 0 0.006062754129380309"/>
+    <origin rpy="0 -0.6981317007977318 0" xyz="-0.033202134613707274 0 -0.003797792545214791"/>
     <parent link="motor_mount_1"/>
     <child link="motor_1"/>
   </joint>
@@ -1145,7 +1145,7 @@
     </inertial>
   </link>
   <joint name="motor_2_joint" type="fixed">
-    <origin rpy="0 -0.8726646259971648 0" xyz="-0.029504429610734115 0 0.006062754129380309"/>
+    <origin rpy="0 -0.6981317007977318 0" xyz="-0.033202134613707274 0 -0.003797792545214791"/>
     <parent link="motor_mount_2"/>
     <child link="motor_2"/>
   </joint>
