@@ -6,6 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
+from torch import roll
 import omni
 import omni.kit.commands
 import asyncio
@@ -147,20 +148,10 @@ class Extension(omni.ext.IExt):
     def _on_config_robot(self):
         stage = omni.usd.get_context().get_stage()
         # Make all rollers spin freely by removing extra drive API
-        for axle in range(0, 2 + 1):
-            for ring in range(0, 1 + 1):
-                for roller in range(0, 4 + 1):
-                    prim_path = (
-                        "/mooncake/axle_"
-                        + str(axle)
-                        + "/roller_"
-                        + str(axle)
-                        + "_"
-                        + str(ring)
-                        + "_"
-                        + str(roller)
-                        + "_joint"
-                    )
+        for wheel_index in range(3):
+            for plate_index in range(2):
+                for roller_index in range(9):
+                    prim_path = "/mooncake/wheel_{}/roller_{}_{}_{}_joint".format(wheel_index, wheel_index, plate_index, roller_index)
                     prim = stage.GetPrimAtPath(prim_path)
                     omni.kit.commands.execute(
                         "UnapplyAPISchemaCommand",
@@ -169,14 +160,36 @@ class Extension(omni.ext.IExt):
                         api_prefix="drive",
                         multiple_api_token="angular",
                     )
+        # for axle in range(0, 2 + 1):
+        #     for ring in range(0, 1 + 1):
+        #         for roller in range(0, 4 + 1):
+        #             prim_path = (
+        #                 "/mooncake/axle_"
+        #                 + str(axle)
+        #                 + "/roller_"
+        #                 + str(axle)
+        #                 + "_"
+        #                 + str(ring)
+        #                 + "_"
+        #                 + str(roller)
+        #                 + "_joint"
+        #             )
+        #             prim = stage.GetPrimAtPath(prim_path)
+        #             omni.kit.commands.execute(
+        #                 "UnapplyAPISchemaCommand",
+        #                 api=UsdPhysics.DriveAPI,
+        #                 prim=prim,
+        #                 api_prefix="drive",
+        #                 multiple_api_token="angular",
+        #             )
 
     def _on_config_drives(self):
-        self._on_config_robot()  # make sure drives are configured first
+        # self._on_config_robot()  # make sure drives are configured first
         stage = omni.usd.get_context().get_stage()
         # set each axis to spin at a rate of 1 rad/s
-        axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_link/axle_0_joint"), "angular")
-        axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_link/axle_1_joint"), "angular")
-        axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_link/axle_2_joint"), "angular")
+        axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_0_joint"), "angular")
+        axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_1_joint"), "angular")
+        axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_2_joint"), "angular")
 
         set_drive_parameters(axle_0, "velocity", math.degrees(1), 0, math.radians(1e7))
         set_drive_parameters(axle_1, "velocity", math.degrees(1), 0, math.radians(1e7))
