@@ -119,7 +119,7 @@ class MoonCakeEnv(gym.Env):
         return observations
 
     def get_observations(self):
-        self._my_world.render()
+        if not self.headless: self._my_world.render()
         reading = self._is.get_sensor_readings(self._sensor_handle)
         mooncake_wheel_velocities = self.mooncake.get_wheel_velocities()
         # print(reading)
@@ -158,7 +158,7 @@ class MoonCakeEnv(gym.Env):
         from omni.isaac.synthetic_utils import SyntheticDataHelper
         self._is = _imu_sensor.acquire_imu_sensor_interface()
         props = _imu_sensor.SensorProperties()
-        props.position = carb.Float3(0, 0, 0)
-        props.orientation = carb.Float4(0, 0, 0, 1)
+        props.position = carb.Float3(0, 0, 17.15) # translate to surface of /mooncake/top_plate
+        props.orientation = carb.Float4(0, 0, 0, 1) # (x, y, z, w)
         props.sensorPeriod = 1 / 500  # 2ms
         self._sensor_handle = self._is.add_sensor_on_body("/mooncake/base_plate", props)

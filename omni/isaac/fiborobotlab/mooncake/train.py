@@ -9,13 +9,11 @@ log_dir = "./mlp_policy"
 my_env = MoonCakeEnv(headless=True)
 
 policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[16, dict(pi=[64, 32], vf=[64, 32])])
-# policy = CnnPolicy
-policy = MlpPolicy
 total_timesteps = 500000
 
 checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=log_dir, name_prefix="mooncake_policy_checkpoint")
 # model = PPO(
-#     policy,
+#     CnnPolicy,
 #     my_env,
 #     policy_kwargs=policy_kwargs,
 #     verbose=1,
@@ -29,7 +27,13 @@ checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=log_dir, nam
 #     max_grad_norm=10,
 #     tensorboard_log=log_dir,
 # )
-model = PPO(MlpPolicy, my_env, verbose=1)
+model = PPO(MlpPolicy,
+            my_env,
+            verbose=1,
+            n_steps=10000,
+            batch_size=100,
+            learning_rate=0.00025,
+            )
 
 model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
 
