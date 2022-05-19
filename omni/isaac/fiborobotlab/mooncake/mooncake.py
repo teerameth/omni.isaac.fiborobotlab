@@ -68,9 +68,10 @@ class MoonCake(Robot):
         Args:
             positions (Tuple[float, float, float]): [description]
         """
-        joint_positions = [None, None]
+        joint_positions = [None, None, None]
         joint_positions[self._wheel_dof_indices[0]] = positions[0]
         joint_positions[self._wheel_dof_indices[1]] = positions[1]
+        joint_positions[self._wheel_dof_indices[2]] = positions[2]
         self.set_joint_positions(positions=np.array(joint_positions))
         return
 
@@ -89,13 +90,35 @@ class MoonCake(Robot):
         Args:
             velocities (Tuple[float, float, float]): [description]
         """
-        joint_velocities = [None, None]
+        joint_velocities = [None, None, None]
         joint_velocities[self._wheel_dof_indices[0]] = velocities[0]
         joint_velocities[self._wheel_dof_indices[1]] = velocities[1]
         joint_velocities[self._wheel_dof_indices[2]] = velocities[2]
         self.set_joint_velocities(velocities=np.array(joint_velocities))
         return
     
+    def get_wheel_efforts(self) -> Tuple[float, float, float]:
+        """[summary]
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray]: [description]
+        """
+        joint_efforts = self.get_joint_efforts()
+        return joint_efforts[self._wheel_dof_indices[0]], joint_efforts[self._wheel_dof_indices[1]], joint_efforts[self._wheel_dof_indices[2]]
+
+    def set_wheel_efforts(self, velocities: Tuple[float, float, float]) -> None:
+        """[summary]
+
+        Args:
+            efforts (Tuple[float, float, float]): [description]
+        """
+        joint_efforts = [None, None]
+        joint_efforts[self._wheel_dof_indices[0]] = velocities[0]
+        joint_efforts[self._wheel_dof_indices[1]] = velocities[1]
+        joint_efforts[self._wheel_dof_indices[2]] = velocities[2]
+        self.set_joint_efforts(efforts=np.array(joint_efforts))
+        return
+
     def apply_wheel_actions(self, actions: ArticulationAction) -> None:
         """[summary]
 
@@ -147,5 +170,5 @@ class MoonCake(Robot):
         kds = [None]*len(self._articulation_controller._dof_controllers)
         for i in self._wheel_dof_indices: kds[i] = 1e2
         self._articulation_controller.set_gains(kds=kds)
-        self._articulation_controller.switch_control_mode(mode="velocity")
+        self._articulation_controller.switch_control_mode(mode="effort") # effort, velocity, position
         return

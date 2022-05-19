@@ -6,10 +6,10 @@ import torch as th
 
 log_dir = "./mlp_policy"
 # set headles to false to visualize training
-my_env = MoonCakeEnv(headless=True)
+my_env = MoonCakeEnv(headless=False)
 
 policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[16, dict(pi=[64, 32], vf=[64, 32])])
-total_timesteps = 500000
+total_timesteps = 5000000
 
 checkpoint_callback = CheckpointCallback(save_freq=10000, save_path=log_dir, name_prefix="mooncake_policy_checkpoint")
 # model = PPO(

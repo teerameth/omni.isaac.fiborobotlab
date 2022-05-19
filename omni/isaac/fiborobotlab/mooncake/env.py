@@ -61,7 +61,7 @@ class MoonCakeEnv(gym.Env):
         gym.Env.__init__(self)
         # self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(2,), dtype=np.float32)
         # self.observation_space = spaces.Box(low=0, high=255, shape=(128, 128, 3), dtype=np.uint8)
-        self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(3,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-20, high=20, shape=(sliding_window_width, 9,), dtype=np.float32)
         
         # self.sub = _physx.get_physx_interface().subscribe_physics_step_events(self._on_update)
@@ -75,13 +75,15 @@ class MoonCakeEnv(gym.Env):
         previous_mooncake_position, previous_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
         previous_ball_position, previous_ball_rotation = self.ball.get_world_pose()
         previous_mooncake_wheel_velocities = self.mooncake.get_wheel_velocities()
-        
+        # print(action)
         ## EXECUTE ACTION ##
         for i in range(self._skip_frame):
             from omni.isaac.core.utils.types import ArticulationAction
-            self.mooncake.apply_wheel_actions(ArticulationAction(joint_velocities=action * 10.0))
+            # self.mooncake.apply_wheel_actions(ArticulationAction(joint_velocities=action))
+            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=action*5000))
             self._my_world.step(render=False)
         observations = self.get_observations()
+        # print(observations)
         info = {}
         done = False
         ## Check for stop event ##
@@ -89,14 +91,16 @@ class MoonCakeEnv(gym.Env):
         robot_fall = True if previous_mooncake_rotation[0] < math.cos(50*math.pi/360) else False    # if angle from normal line > 50deg mean it going to fall for sure
         if exceed_time_limit or robot_fall:
             done = True
-            print("Frame count after_reset: ", end="")
-            print(self._my_world.current_time_step_index - self._steps_after_reset) # Frames count after reset
+            # print("Frame count after_reset: ", end="")
+            # print(self._my_world.current_time_step_index - self._steps_after_reset) # Frames count after reset
             
         ## GET FEEDBACK & CALCULATE REWARD ##
         current_mooncake_position, current_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
         current_ball_position, current_ball_rotation = self.ball.get_world_pose()
 
         reward = current_mooncake_rotation[0] - previous_mooncake_rotation[0]
+        reward *= 100
+        # print("%.4f"%(reward))
         # previous_dist_to_goal = np.linalg.norm(goal_world_position - previous_mooncake_position)
         # current_dist_to_goal = np.linalg.norm(goal_world_position - current_mooncake_position)
         # reward = previous_dist_to_goal - current_dist_to_goal
@@ -134,11 +138,10 @@ class MoonCakeEnv(gym.Env):
                                     mooncake_wheel_velocities[0],
                                     mooncake_wheel_velocities[1],
                                     mooncake_wheel_velocities[2]], dtype=np.float32)
-            
             self._observations_buffer.append(observations)
         ## Fill NaN with ZEROs
-        while len(self._observations_buffer) < sliding_window_width: self._observations_buffer.append(np.zeros((9), dtype=np.float32))
-        self._observations_buffer = self._observations_buffer[:sliding_window_width]
+        while len(self._observations_buffer) < sliding_window_width: self._observations_buffer = [np.zeros((9), dtype=np.float32)] + self._observations_buffer
+        self._observations_buffer = self._observations_buffer[-sliding_window_width:]
         return np.array(self._observations_buffer, dtype=np.float32)
 
     def render(self, mode="human"):
