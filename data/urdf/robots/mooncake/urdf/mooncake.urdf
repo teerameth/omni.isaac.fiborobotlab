@@ -7,6 +7,7 @@
   <!--Lower plate-->
   <link name="base_plate">
     <visual>
+      <origin rpy="0 0 -1.5707963267948966"/>
       <geometry>
         <mesh filename="package://meshes/lower_plate.dae" scale="1 1 1"/>
       </geometry>
@@ -44,7 +45,7 @@
     </inertial>
   </link>
   <joint name="upper_plate_joint" type="fixed">
-    <origin xyz="0 0 0.1685"/>
+    <origin rpy="0 0 -1.5707963267948966" xyz="0 0 0.1685"/>
     <parent link="base_plate"/>
     <child link="upper_plate"/>
   </joint>
@@ -67,7 +68,7 @@
     </inertial>
   </link>
   <joint name="pillar_0_joint" type="fixed">
-    <origin rpy="0 0 0.0" xyz="0.13125 0.022 0.08425"/>
+    <origin rpy="0 0 -1.5707963267948966" xyz="0.022000000000000006 -0.13125 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_0"/>
   </joint>
@@ -90,7 +91,7 @@
     </inertial>
   </link>
   <joint name="pillar_1_joint" type="fixed">
-    <origin rpy="0 0 0.0" xyz="0.13125 -0.022 0.08425"/>
+    <origin rpy="0 0 -1.5707963267948966" xyz="-0.021999999999999992 -0.13125 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_1"/>
   </joint>
@@ -113,7 +114,7 @@
     </inertial>
   </link>
   <joint name="pillar_2_joint" type="fixed">
-    <origin rpy="0 0 1.0471975511965976" xyz="0.04657244111674237 0.12466583424670757 0.08425"/>
+    <origin rpy="0 0 -0.5235987755982989" xyz="0.12466583424670756 -0.04657244111674236 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_2"/>
   </joint>
@@ -136,7 +137,7 @@
     </inertial>
   </link>
   <joint name="pillar_3_joint" type="fixed">
-    <origin rpy="0 0 1.0471975511965976" xyz="0.08467755888325766 0.10266583424670757 0.08425"/>
+    <origin rpy="0 0 -0.5235987755982989" xyz="0.10266583424670755 -0.08467755888325765 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_3"/>
   </joint>
@@ -159,7 +160,7 @@
     </inertial>
   </link>
   <joint name="pillar_4_joint" type="fixed">
-    <origin rpy="0 0 2.0943951023931953" xyz="-0.08467755888325762 0.10266583424670758 0.08425"/>
+    <origin rpy="0 0 0.5235987755982987" xyz="0.10266583424670758 0.08467755888325762 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_4"/>
   </joint>
@@ -182,7 +183,7 @@
     </inertial>
   </link>
   <joint name="pillar_5_joint" type="fixed">
-    <origin rpy="0 0 2.0943951023931953" xyz="-0.04657244111674232 0.12466583424670757 0.08425"/>
+    <origin rpy="0 0 0.5235987755982987" xyz="0.12466583424670757 0.04657244111674232 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_5"/>
   </joint>
@@ -205,7 +206,7 @@
     </inertial>
   </link>
   <joint name="pillar_6_joint" type="fixed">
-    <origin rpy="0 0 3.141592653589793" xyz="-0.13125 -0.02199999999999998 0.08425"/>
+    <origin rpy="0 0 1.5707963267948966" xyz="-0.021999999999999992 0.13125 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_6"/>
   </joint>
@@ -228,7 +229,7 @@
     </inertial>
   </link>
   <joint name="pillar_7_joint" type="fixed">
-    <origin rpy="0 0 3.141592653589793" xyz="-0.13125 0.022000000000000016 0.08425"/>
+    <origin rpy="0 0 1.5707963267948966" xyz="0.022000000000000006 0.13125 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_7"/>
   </joint>
@@ -251,7 +252,7 @@
     </inertial>
   </link>
   <joint name="pillar_8_joint" type="fixed">
-    <origin rpy="0 0 4.1887902047863905" xyz="-0.046572441116742413 -0.12466583424670755 0.08425"/>
+    <origin rpy="0 0 2.617993877991494" xyz="-0.12466583424670756 0.0465724411167424 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_8"/>
   </joint>
@@ -274,7 +275,7 @@
     </inertial>
   </link>
   <joint name="pillar_9_joint" type="fixed">
-    <origin rpy="0 0 4.1887902047863905" xyz="-0.0846775588832577 -0.10266583424670753 0.08425"/>
+    <origin rpy="0 0 2.617993877991494" xyz="-0.10266583424670754 0.08467755888325769 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_9"/>
   </joint>
@@ -297,7 +298,7 @@
     </inertial>
   </link>
   <joint name="pillar_10_joint" type="fixed">
-    <origin rpy="0 0 5.235987755982988" xyz="0.08467755888325758 -0.10266583424670765 0.08425"/>
+    <origin rpy="0 0 3.6651914291880914" xyz="-0.10266583424670765 -0.08467755888325758 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_10"/>
   </joint>
@@ -320,7 +321,7 @@
     </inertial>
   </link>
   <joint name="pillar_11_joint" type="fixed">
-    <origin rpy="0 0 5.235987755982988" xyz="0.04657244111674226 -0.12466583424670762 0.08425"/>
+    <origin rpy="0 0 3.6651914291880914" xyz="-0.12466583424670762 -0.04657244111674226 0.08425"/>
     <parent link="base_plate"/>
     <child link="pillar_11"/>
   </joint>
@@ -332,7 +333,7 @@
     </visual>
   </link>
   <joint name="motor_mount_0_joint" type="fixed">
-    <origin rpy="0 0 -3.141592653589793" xyz="-0.095 -1.1634144591899856e-17 0"/>
+    <origin rpy="0 0 -4.71238898038469" xyz="-1.745121688784978e-17 0.095 0"/>
     <parent link="base_plate"/>
     <child link="motor_mount_0"/>
   </joint>
@@ -373,7 +374,7 @@
   </link>
   <joint name="wheel_0_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_0"/>
     <child link="wheel_0"/>
   </joint>
@@ -727,7 +728,7 @@
     </visual>
   </link>
   <joint name="motor_mount_1_joint" type="fixed">
-    <origin rpy="0 0 -1.0471975511965976" xyz="0.047500000000000014 -0.08227241335952167 0"/>
+    <origin rpy="0 0 -2.617993877991494" xyz="-0.08227241335952165 -0.047500000000000035 0"/>
     <parent link="base_plate"/>
     <child link="motor_mount_1"/>
   </joint>
@@ -768,7 +769,7 @@
   </link>
   <joint name="wheel_1_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_1"/>
     <child link="wheel_1"/>
   </joint>
@@ -1122,7 +1123,7 @@
     </visual>
   </link>
   <joint name="motor_mount_2_joint" type="fixed">
-    <origin rpy="0 0 1.0471975511965976" xyz="0.047500000000000014 0.08227241335952167 0"/>
+    <origin rpy="0 0 -0.5235987755982989" xyz="0.08227241335952167 -0.0475 0"/>
     <parent link="base_plate"/>
     <child link="motor_mount_2"/>
   </joint>
@@ -1163,7 +1164,7 @@
   </link>
   <joint name="wheel_2_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_2"/>
     <child link="wheel_2"/>
   </joint>

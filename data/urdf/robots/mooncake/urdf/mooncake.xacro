@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <robot name="mooncake"
 	xmlns:xacro="http://ros.org/wiki/xacro">
-    <xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+	<!--Rotate entire robot-->
+    <xacro:property name="robot_angle" value="${-pi/2}"/>
+	<xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
 		<xacro:property name="w" value="${size.split()[0]}"/>
 		<xacro:property name="d" value="${size.split()[1]}"/>
 		<xacro:property name="h" value="${size.split()[2]}"/>
@@ -80,7 +82,7 @@
 
     <xacro:macro name="pillars" params="num">
 		<!--Angle from center-->
-		<xacro:property name="angle" value="${num*(pi/3)}"/>
+		<xacro:property name="angle" value="${num*(pi/3) + robot_angle}"/>
 		<!--Radius from center-->
 		<xacro:property name="r" value="0.13125"/>
 		<!--Z offset-->
@@ -135,7 +137,7 @@
 		</link>
 		<joint name="wheel_${num}_joint" type="continuous">
 			<origin xyz="0 0 ${z}" rpy="0 0 0"/>
-			<axis xyz="0 0 1"/>
+			<axis xyz="0 0 -1"/>
 			<parent link="motor_${num}"/>
 			<child link="wheel_${num}"/>
 		</joint>
@@ -186,7 +188,7 @@
 
 	<xacro:macro name="motor_mount_assembly" params="num">
 		<!--Angle from center-->
-		<xacro:property name="angle" value="${(num-1.5)*(2*pi/3)}"/>
+		<xacro:property name="angle" value="${(num-3/2)*(2*pi/3) + robot_angle}"/>
 		<!--Radius from center-->
 		<xacro:property name="r" value="0.095"/>
 		<link name="motor_mount_${num}">
@@ -210,6 +212,7 @@
 	<!--Lower plate-->
 	<link name="base_plate">
 		<visual>
+			<origin rpy="0 0 ${robot_angle}"/>
 			<geometry>
 				<mesh filename="package://meshes/lower_plate.dae" scale="1 1 1"/>
 			</geometry>
@@ -230,7 +233,7 @@
 		<xacro:inertial_cylinder rho="1212" length="0.006" radius="0.15" xyz="0 0 0"/>
 	</link>
 	<joint name="upper_plate_joint" type="fixed">
-		<origin xyz="0 0 0.1685"/>
+		<origin xyz="0 0 0.1685" rpy="0 0 ${robot_angle}"/>
 		<parent link="base_plate"/>
 		<child link="upper_plate"/>
 	</joint>

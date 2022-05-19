@@ -22,6 +22,11 @@ from omni.isaac.ui.ui_utils import setup_ui_headers, get_style, btn_builder
 
 EXTENSION_NAME = "Import Mooncake"
 
+def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):
+    omega_0 = (v_x-d*w_z)/r
+    omega_1 = -(v_x-math.sqrt(3)*v_y+2*d*w_z)/(2*r)
+    omega_2 = -(v_x+math.sqrt(3)*v_y+2*d*w_z)/(2*r)
+    return [omega_0, omega_1, omega_2]
 
 class Extension(omni.ext.IExt):
     def on_startup(self, ext_id: str):
@@ -169,6 +174,11 @@ class Extension(omni.ext.IExt):
         axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_1_joint"), "angular")
         axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_2_joint"), "angular")
 
-        set_drive_parameters(axle_0, "velocity", math.degrees(1), 0, math.radians(1e7))
-        set_drive_parameters(axle_1, "velocity", math.degrees(1), 0, math.radians(1e7))
-        set_drive_parameters(axle_2, "velocity", math.degrees(1), 0, math.radians(1e7))
+        omega = velocity2omega(0, 0.1, 0)
+        print(omega)
+        set_drive_parameters(axle_0, "velocity", math.degrees(omega[0]), 0, math.radians(1e7))
+        set_drive_parameters(axle_1, "velocity", math.degrees(omega[1]), 0, math.radians(1e7))
+        set_drive_parameters(axle_2, "velocity", math.degrees(omega[2]), 0, math.radians(1e7))
+        # set_drive_parameters(axle_0, "effort", math.degrees(omega[0]), 0, math.radians(1e7))
+        # set_drive_parameters(axle_1, "effort", math.degrees(omega[1]), 0, math.radians(1e7))
+        # set_drive_parameters(axle_2, "effort", math.degrees(omega[2]), 0, math.radians(1e7))
