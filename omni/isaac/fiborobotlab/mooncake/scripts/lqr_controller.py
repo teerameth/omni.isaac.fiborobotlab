@@ -1,10 +1,9 @@
 import numpy as np
 import scipy
+from scipy import linalg
 import control
+import math
 
-# x = np.array([[  0,   1,   2,   3,   4],
-#        [-99,   6, -99,   8, -99],
-#        [-99,  11, -99,  13, -99]])
 def k_gain_calculator(Q_state,R_state):
     # defined dynamics parameters
     mb = 4.0
@@ -49,13 +48,46 @@ def k_gain_calculator(Q_state,R_state):
     Q = np.eye(8) * Q_state
     R = np.eye(3) * R_state
     K, S, E = control.lqr(A_sys, B_sys, Q, R)
-    print("A_sys =", A_sys)
-    print("B_sys =", B_sys)
-    print("C_sys =", C_sys)
-    print("D_sys =", D_sys)
-    print("K =", K)
+    # print("A_sys =", A_sys)
+    # print("B_sys =", B_sys)
+    # print("C_sys =", C_sys)
+    # print("D_sys =", D_sys)
+    # print("K =", K)
     # print(2*5**2*3*2)
     return K
-def lqrController(x_fb,x_ref,K):
-    u= K * (x_ref-x_fb)
+def lqr_controller(x_ref,x_fb,K):
+    u= -K @ (x_ref-x_fb)
     return u
+ 
+def euler_from_quaternion(x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+     
+        return [roll_x, pitch_y, yaw_z] # in radians
+
+def ball_velocity(pre_vel,now_vel,dt):
+    v = (now_vel-pre_vel)/dt
+    return v 
+
+def Txyz2wheel(Txyz):
+    alpha = 50.0*np.pi/180.0 # wheelaxis_theta 
+    Twheels = np.array([[-np.cos(alpha)  ,              0            ,    -np.sin(alpha)],
+                        [np.cos(alpha)   , np.sqrt(3)*np.cos(alpha)/2 ,   -np.sin(alpha)],
+                        [np.cos(alpha)   ,-np.sqrt(3)*np.cos(alpha)/2,    -np.sin(alpha)]]) @ Txyz
+    return Twheels
