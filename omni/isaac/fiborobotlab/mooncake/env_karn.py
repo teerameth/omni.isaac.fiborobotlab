@@ -14,10 +14,11 @@ class MoonCakeEnv(gym.Env):
 
     def __init__(
         self,
-        skip_frame=1,
-        physics_dt=1.0 / 1000.0,
+        skip_frame=2,
+        physics_dt=1.0 / 200.0,
         rendering_dt=1.0 / 60.0,
-        max_episode_length=10000,
+        max_episode_length=50000,
+        display_every_iter = 1,
         seed=0,
         headless=True,
     ) -> None:
@@ -27,8 +28,12 @@ class MoonCakeEnv(gym.Env):
         self._simulation_app = SimulationApp({"headless": self.headless, "anti_aliasing": 0})
         self._skip_frame = skip_frame
         self._dt = physics_dt * self._skip_frame
+        self._physics_dt = physics_dt
+        self._rendering_dt = rendering_dt
         self._max_episode_length = max_episode_length
         self._steps_after_reset = int(rendering_dt / physics_dt)
+        self._iteration_count = 0
+        self._display_every_iter = display_every_iter
         from omni.isaac.core import World
         from mooncake import MoonCake
         from omni.isaac.core.objects import DynamicSphere
@@ -50,6 +55,7 @@ class MoonCakeEnv(gym.Env):
                 position=np.array([0, 0, 12]),
                 radius=12,  # mediciene ball diameter 24cm.
                 color=np.array([1.0, 0, 0]),
+                mass = 4,
             )
         )
 
@@ -61,7 +67,7 @@ class MoonCakeEnv(gym.Env):
         gym.Env.__init__(self)
         # self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(2,), dtype=np.float32)
         # self.observation_space = spaces.Box(low=0, high=255, shape=(128, 128, 3), dtype=np.uint8)
-        self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(3,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(8,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-20, high=20, shape=(sliding_window_width, 9,), dtype=np.float32)
         
         # self.sub = _physx.get_physx_interface().subscribe_physics_step_events(self._on_update)
@@ -85,10 +91,12 @@ class MoonCakeEnv(gym.Env):
         current_ball_position, current_ball_rotation = self.ball.get_world_pose()
         vx = ball_velocity( previous_ball_position[0], current_ball_position[0], self._dt )
         vy = ball_velocity( previous_ball_position[1], current_ball_position[1], self._dt )
-        Q_state = np.array([50, 50, 50, 30, 30, 50, 50, 50])
-        R_state = np.array([1, 1, 1])
-        # Q_state = np.array([1, 1, 1, 1, 1, 1, 1, 1])
-        # R_state = np.array([1, 1, 1])
+        Q_state = np.array([4100, 4100, 5200, 4000, 4000, 4100, 4100, 5200])
+        R_state = np.array([10, 10, 10])
+        # Q_state = np.array([5000, 5000, 5000, 3000, 3000, 5000, 5000, 5000])
+        # R_state = np.array([10, 10, 10])
+        # Q_state = np.array([1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000])
+        # R_state = np.array([10, 10, 10])
         euler_xyz = euler_from_quaternion(previous_mooncake_rotation[1],
                                                 previous_mooncake_rotation[2],
                                                 previous_mooncake_rotation[3],
@@ -98,18 +106,18 @@ class MoonCakeEnv(gym.Env):
         wz_robot = observations[-1,5]
 
         K = k_gain_calculator(Q_state, R_state)
-        x_ref = np.array([0, 0, 0, 0, 0, 0, 0, 0]).T
+        x_ref = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).T # [ phix(roll), phiy(pitch), phiz(yaw), vx, vy, dphix, dphiy, dphiz ]
         x_fb = np.array([euler_xyz[0], euler_xyz[1], euler_xyz[2], vx, vy, wx_robot, wy_robot, wz_robot]).T
         u = lqr_controller(x_ref,x_fb,K)
         # temp_u = u.tolist()
         # print(type(temp_u[0]))
         action = Txyz2wheel(u)
-        print(u)
+        print(action * 1000)
 
         ## EXECUTE ACTION ##
         for i in range(self._skip_frame):
             from omni.isaac.core.utils.types import ArticulationAction
-            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=action*1000))
+            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=action*900))
             self._my_world.step(render=False)
         observations = self.get_observations()
         info = {}
@@ -117,7 +125,7 @@ class MoonCakeEnv(gym.Env):
         ## Check for stop event ##
         exceed_time_limit = self._my_world.current_time_step_index - self._steps_after_reset >= self._max_episode_length
         robot_fall = True if previous_mooncake_rotation[0] < math.cos(50*math.pi/360) else False    # if angle from normal line > 50deg mean it going to fall for sure
-        if exceed_time_limit or robot_fall:
+        if exceed_time_limit or robot_fall or current_mooncake_position[2]< -12.0:
             done = True
             print("Frame count after_reset: ", end="")
             print(self._my_world.current_time_step_index - self._steps_after_reset) # Frames count after reset
@@ -142,6 +150,7 @@ class MoonCakeEnv(gym.Env):
 
     def reset(self):
         self._my_world.reset()
+        self._render_counter = 0
         self._observations_buffer = []  # clear observation buffer
         # randomize goal location in circle around robot
         alpha = 2 * math.pi * np.random.rand()
@@ -151,7 +160,10 @@ class MoonCakeEnv(gym.Env):
         return observations
 
     def get_observations(self):
-        if not self.headless: self._my_world.render()
+        if not self.headless and self._iteration_count%self._display_every_iter==0:
+            if (self._my_world.current_time_step_index - self._steps_after_reset)*self._physics_dt/self._rendering_dt > self._render_counter:
+                self._render_counter += 1
+                self._my_world.render()
         reading = self._is.get_sensor_readings(self._sensor_handle)
         mooncake_wheel_velocities = self.mooncake.get_wheel_velocities()
         # print(reading)
