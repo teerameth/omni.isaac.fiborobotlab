@@ -2,7 +2,7 @@
 <robot name="mooncake"
 	xmlns:xacro="http://ros.org/wiki/xacro">
 	<!--Rotate entire robot-->
-    <xacro:property name="robot_angle" value="${-pi/2}"/>
+    <xacro:property name="robot_angle" value="${0}"/>
 	<xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
 		<xacro:property name="w" value="${size.split()[0]}"/>
 		<xacro:property name="d" value="${size.split()[1]}"/>
