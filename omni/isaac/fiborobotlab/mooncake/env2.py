@@ -162,15 +162,15 @@ class MoonCakeEnv(gym.Env):
         # print(reading)
         if reading.shape[0]:    # at least 1 data in buffer (use the most recent data)
             # IMU will  return [???, acc_x, acc_y, acc_z, gyr_x, gyr_y, gyr_z]
-            observations = np.array([reading[-1]["lin_acc_x"],
-                                    reading[-1]["lin_acc_y"],
-                                    reading[-1]["lin_acc_z"],
-                                    reading[-1]["ang_vel_x"],
-                                    reading[-1]["ang_vel_y"],
-                                    reading[-1]["ang_vel_z"],
-                                    mooncake_wheel_velocities[0],
-                                    mooncake_wheel_velocities[1],
-                                    mooncake_wheel_velocities[2]], dtype=np.float32)
+            # observations = np.array([reading[-1]["lin_acc_x"],
+            #                         reading[-1]["lin_acc_y"],
+            #                         reading[-1]["lin_acc_z"],
+            #                         reading[-1]["ang_vel_x"],
+            #                         reading[-1]["ang_vel_y"],
+            #                         reading[-1]["ang_vel_z"],
+            #                         mooncake_wheel_velocities[0],
+            #                         mooncake_wheel_velocities[1],
+            #                         mooncake_wheel_velocities[2]], dtype=np.float32)
             robot_fall_angle = q2falling(self.mooncake.get_world_pose()[1])
             robot_velocity = self.mooncake.get_linear_velocity()
             robot_omega = self.mooncake.get_angular_velocity()
