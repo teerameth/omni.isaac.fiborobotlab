@@ -9,6 +9,20 @@ from torch import dtype
 from scripts.lqr_controller import *
 sliding_window_width = 3    # size of observation buffer to look back N step(s)
 
+def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):    # r: wheel radius, d=distance from center to wheel contact
+    omega_0 = (v_x-d*w_z)/r
+    omega_1 = -(v_x-math.sqrt(3)*v_y+2*d*w_z)/(2*r)
+    omega_2 = -(v_x+math.sqrt(3)*v_y+2*d*w_z)/(2*r)
+    return [omega_0, omega_1, omega_2]
+def q2falling(q):
+    try:
+        if q[1] == 0 and q[2] == 0 and q[3] == 0:
+            return 0
+        return 2*math.acos(q[0])*math.sqrt((q[1]**2 + q[2]**2)/(q[1]**2 + q[2]**2 + q[3]**2))
+    except:
+        print(q)
+        return 0
+
 class MoonCakeEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
@@ -67,7 +81,7 @@ class MoonCakeEnv(gym.Env):
         gym.Env.__init__(self)
         # self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(2,), dtype=np.float32)
         # self.observation_space = spaces.Box(low=0, high=255, shape=(128, 128, 3), dtype=np.uint8)
-        self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(8,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-100.0, high=100.0, shape=(11,), dtype=np.float32)
         self.observation_space = spaces.Box(low=-20, high=20, shape=(sliding_window_width, 9,), dtype=np.float32)
         
         # self.sub = _physx.get_physx_interface().subscribe_physics_step_events(self._on_update)
@@ -83,16 +97,21 @@ class MoonCakeEnv(gym.Env):
             previous_mooncake_position, previous_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
             previous_ball_position, previous_ball_rotation = self.ball.get_world_pose()
             # previous_mooncake_wheel_velocities = self.mooncake.get_wheel_velocities()      
+        previous_fall_rotation = q2falling(previous_mooncake_rotation)
 
+        scaled_action_Q = [(action[i]+100)*50 + 0.1 for i in range(8)]
+        scaled_action_R = [(action[i]+100)/2 + 0.1 for i in range(8, 11)]
         # Controller
-        # print(action)
+        print(scaled_action_Q, scaled_action_R)
         observations = self.get_observations()
         current_mooncake_position, current_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
         current_ball_position, current_ball_rotation = self.ball.get_world_pose()
         vx = ball_velocity( previous_ball_position[0], current_ball_position[0], self._dt )
         vy = ball_velocity( previous_ball_position[1], current_ball_position[1], self._dt )
-        Q_state = np.array([4100, 4100, 5200, 4000, 4000, 4100, 4100, 5200])
-        R_state = np.array([10, 10, 10])
+        Q_state = np.array(scaled_action_Q)
+        R_state = np.array(scaled_action_R)
+        # Q_state = np.array([4100, 4100, 5200, 4000, 4000, 4100, 4100, 5200])
+        # R_state = np.array([10, 10, 10])
         # Q_state = np.array([5000, 5000, 5000, 3000, 3000, 5000, 5000, 5000])
         # R_state = np.array([10, 10, 10])
         # Q_state = np.array([1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000])
@@ -111,20 +130,20 @@ class MoonCakeEnv(gym.Env):
         u = lqr_controller(x_ref,x_fb,K)
         # temp_u = u.tolist()
         # print(type(temp_u[0]))
-        action = Txyz2wheel(u)
-        print(action * 1000)
+        effort = Txyz2wheel(u)
+        print(effort)
 
         ## EXECUTE ACTION ##
         for i in range(self._skip_frame):
             from omni.isaac.core.utils.types import ArticulationAction
-            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=action*900))
+            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=effort*1000))
             self._my_world.step(render=False)
         observations = self.get_observations()
         info = {}
         done = False
         ## Check for stop event ##
         exceed_time_limit = self._my_world.current_time_step_index - self._steps_after_reset >= self._max_episode_length
-        robot_fall = True if previous_mooncake_rotation[0] < math.cos(50*math.pi/360) else False    # if angle from normal line > 50deg mean it going to fall for sure
+        robot_fall = True if previous_fall_rotation > 50/180*math.pi else False    # if angle from normal line > 50deg mean it going to fall for sure
         if exceed_time_limit or robot_fall or current_mooncake_position[2]< -12.0:
             done = True
             print("Frame count after_reset: ", end="")
@@ -133,8 +152,10 @@ class MoonCakeEnv(gym.Env):
         ## GET FEEDBACK & CALCULATE REWARD ##
         current_mooncake_position, current_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
         current_ball_position, current_ball_rotation = self.ball.get_world_pose()
+        current_fall_rotation = q2falling(current_mooncake_rotation)
 
-        reward = current_mooncake_rotation[0] - previous_mooncake_rotation[0]
+        reward = previous_fall_rotation - current_fall_rotation
+        reward *= 100
         # previous_dist_to_goal = np.linalg.norm(goal_world_position - previous_mooncake_position)
         # current_dist_to_goal = np.linalg.norm(goal_world_position - current_mooncake_position)
         # reward = previous_dist_to_goal - current_dist_to_goal
