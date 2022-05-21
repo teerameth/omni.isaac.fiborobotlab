@@ -8,7 +8,7 @@ import carb
 from omni.isaac.imu_sensor import _imu_sensor
 from torch import dtype
 
-sliding_window_width = 3
+sliding_window_width = 1
 def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):    # r: wheel radius, d=distance from center to wheel contact
     omega_0 = (v_x-d*w_z)/r
     omega_1 = -(v_x-math.sqrt(3)*v_y+2*d*w_z)/(2*r)
@@ -32,7 +32,7 @@ class MoonCakeEnv(gym.Env):
         physics_dt=1.0 / 100.0,
         rendering_dt=1.0 / 60.0,
         max_episode_length=1000,
-        display_every_iter = 1,
+        display_every_iter = 20,
         seed=0,
         headless=True,
     ) -> None:
@@ -82,7 +82,7 @@ class MoonCakeEnv(gym.Env):
         # self.action_space = spaces.Box(low=-10.0, high=10.0, shape=(2,), dtype=np.float32)
         # self.observation_space = spaces.Box(low=0, high=255, shape=(128, 128, 3), dtype=np.uint8)
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-20, high=20, shape=(sliding_window_width, 9,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(sliding_window_width, 10,), dtype=np.float32)
         
         # self.sub = _physx.get_physx_interface().subscribe_physics_step_events(self._on_update)
         return
@@ -95,8 +95,8 @@ class MoonCakeEnv(gym.Env):
         previous_mooncake_position, previous_mooncake_rotation = self.mooncake.get_world_pose() # [x, y, z], [w, x, y, z]
         previous_ball_position, previous_ball_rotation = self.ball.get_world_pose()
         previous_fall_rotation = q2falling(previous_mooncake_rotation)
-        print(previous_fall_rotation)
-        time.sleep(0.1)
+        # print(previous_fall_rotation)
+        # time.sleep(0.1)
         previous_mooncake_wheel_velocities = self.mooncake.get_wheel_velocities()
         # print(action)
         ## Convert action(linear_velocity) -> angular_velocity
@@ -106,7 +106,7 @@ class MoonCakeEnv(gym.Env):
             from omni.isaac.core.utils.types import ArticulationAction
             # self.mooncake.apply_wheel_actions(ArticulationAction(joint_velocities=wheel_speed))
             # self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=[wheel_speed[i]*500 for i in range(3)]))
-            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=[action[i] * 10000 for i in range(3)]))
+            self.mooncake.apply_wheel_actions(ArticulationAction(joint_efforts=[action[i] * 3000 for i in range(3)]))
             self._my_world.step(render=False)
         observations = self.get_observations()
         # print(observations)
@@ -171,6 +171,14 @@ class MoonCakeEnv(gym.Env):
                                     mooncake_wheel_velocities[0],
                                     mooncake_wheel_velocities[1],
                                     mooncake_wheel_velocities[2]], dtype=np.float32)
+            robot_fall_angle = q2falling(self.mooncake.get_world_pose()[1])
+            robot_velocity = self.mooncake.get_linear_velocity()
+            robot_omega = self.mooncake.get_angular_velocity()
+            ball_velocity = self.ball.get_linear_velocity()
+            observations = np.array([robot_fall_angle] + \
+                                     list(robot_velocity) + \
+                                     list(robot_omega) + \
+                                     list(ball_velocity), dtype=np.float32)
             self._observations_buffer.append(observations)
         ## Fill NaN with ZEROs
         while len(self._observations_buffer) < sliding_window_width: self._observations_buffer = [np.zeros((9), dtype=np.float32)] + self._observations_buffer

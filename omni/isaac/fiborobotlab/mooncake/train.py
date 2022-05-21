@@ -1,4 +1,4 @@
-from env import MoonCakeEnv
+from env2 import MoonCakeEnv
 from stable_baselines3 import PPO
 from stable_baselines3.ppo import CnnPolicy, MlpPolicy
 from stable_baselines3.common.callbacks import CheckpointCallback
