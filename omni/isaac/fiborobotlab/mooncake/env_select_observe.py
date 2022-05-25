@@ -127,7 +127,7 @@ class MoonCakeEnv(gym.Env):
         if exceed_time_limit or robot_fall:
             done = True
             self._iteration_count += 1
-            b = str(self._observ_selection[0])+str(self._observ_selection[1])+str(self._observ_selection[2])+str(self._observ_selection[3])
+            b = str(self._observ_selection[0])+str(self._observ_selection[1])+str(self._observ_selection[2])+str(self._observ_selection[3])+str(self._observ_selection[4])
             save_dir = log_dir + "/mooncake_policy_" + b + '/log.txt'
             f = open(save_dir, 'a')
             time_step_count_before_reset = self._my_world.current_time_step_index - self._steps_after_reset
