@@ -179,6 +179,3 @@ class Extension(omni.ext.IExt):
         set_drive_parameters(axle_0, "velocity", math.degrees(omega[0]), 0, math.radians(1e7))
         set_drive_parameters(axle_1, "velocity", math.degrees(omega[1]), 0, math.radians(1e7))
         set_drive_parameters(axle_2, "velocity", math.degrees(omega[2]), 0, math.radians(1e7))
-        # set_drive_parameters(axle_0, "effort", math.degrees(omega[0]), 0, math.radians(1e7))
-        # set_drive_parameters(axle_1, "effort", math.degrees(omega[1]), 0, math.radians(1e7))
-        # set_drive_parameters(axle_2, "effort", math.degrees(omega[2]), 0, math.radians(1e7))

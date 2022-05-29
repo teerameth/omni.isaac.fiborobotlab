@@ -81,7 +81,7 @@ val_acc_metric = keras.metrics.MeanSquaredError()
 test_acc_metric = keras.metrics.MeanSquaredError()
 
 val_loss_tracker = []
-for epoch in range(100):
+for epoch in range(1000):
     print("\nStart of epoch %d" % (epoch,))
     train_loss = []
     val_loss = []
@@ -107,9 +107,9 @@ for epoch in range(100):
     val_loss_tracker.append(np.mean(val_loss))
     # Display metrics at the end of each epoch
     train_acc = train_acc_metric.result()
-    print("Training acc over epoch: %.4f" % (float(train_acc),))
+    print("Training mse over epoch: %.4f" % (float(train_acc),))
     val_acc = val_acc_metric.result()
-    print("Validation acc: %.4f" % (float(val_acc),))
+    print("Validation mse: %.4f" % (float(val_acc),))
     test_acc = test_acc_metric.result()
     # Reset metrics at the end of each epoch
     train_acc_metric.reset_states()
