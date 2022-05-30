@@ -1,2 +1,3 @@
 *.pyc
 .idea/*
+omni/isaac/fiborobotlab/mooncake/examples/wandb/*

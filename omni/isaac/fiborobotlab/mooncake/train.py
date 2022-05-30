@@ -32,7 +32,7 @@ model = PPO(MlpPolicy,
             verbose=1,
             n_steps=10000,
             batch_size=100,
-            learning_rate=0.00025,
+            learning_rate=0.00025
             )
 
 model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
