@@ -1,0 +1,142 @@
+<?xml version="1.0"?>
+<robot name="obike" xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="w" value="${size.split()[0]}"/>
+		<xacro:property name="d" value="${size.split()[1]}"/>
+		<xacro:property name="h" value="${size.split()[2]}"/>
+		<xacro:property name="mass" value="${rho*w*d*h}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(mass/12)*(h**2 + d**2)}" iyy="${(mass/12)*(w**2 + h**2)}" izz="${(mass/12)*(w**2 + d**2)}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="inertial_cylinder" params="length radius rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="mass" value="${rho*pi*length*radius**2}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(mass/12)*(3*radius**2 + length**2)}" iyy="${(mass/12)*(3*radius**2 + length**2)}" izz="${(mass/2)*radius**2}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="inertial_sphere" params="radius rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
+		<xacro:property name="mass" value="${4/3*rho*pi*radius**3}"/>
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${(2/5*mass)*(radius**2)}" iyy="${(2/5*mass)*(radius**2)}" izz="${(2/5*mass)*(radius**2)}" ixy="0" ixz="0" iyz="0"/>
+		</inertial>
+	</xacro:macro>
+	<xacro:macro name="collision_cylinder" params="length radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<cylinder length="${length}" radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_capsule" params="length radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<capsule length="${length}" radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_box" params="size xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<box size="${size}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+	<xacro:macro name="collision_sphere" params="radius xyz:='0 0 0' rpy:='0 0 0'">
+		<collision>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<geometry>
+				<sphere radius="${radius}"/>
+			</geometry>
+		</collision>
+	</xacro:macro>
+
+
+	<link name="base">
+		
+	</link>
+
+    <link name="body">
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<box size="0.150 0.04 0.06" xyz="0 0 0"/>
+			</geometry>
+		</visual>
+		<!-- <xacro:collision_box size="0.150 0.04 0.06"/> -->
+		<xacro:inertial_box size="0.150 0.04 0.06" rho="513.89"/>
+	</link>
+
+    <joint name="base_joint" type="continuous">
+        <origin xyz="0 0 0.0665" rpy="0 0 0"/>
+        <axis xyz="1 0 0"/>
+		<parent link="base"/>
+		<child link="body"/>
+    </joint>
+
+	<link name="reaction_wheel_assembly">
+		<visual>
+			<origin rpy="0 0 0"/>
+			<geometry>
+				<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.0125" length="0.08"/>
+			</geometry>
+		</visual>
+		<!-- motor inertia -->
+		<xacro:inertial_cylinder rho="5424" length="0.08" radius="0.0125"/>
+	</link>
+
+    <joint name="reaction_wheel_assembly_joint" type="fixed">
+        <origin xyz="0 0 0.0605" rpy="0 ${pi/2} 0"/>
+        <parent link="body"/>
+		<child link="reaction_wheel_assembly"/>
+    </joint>
+
+	<link name="reaction_wheel">
+		<visual>
+			<origin rpy="0 0 0"/>
+			<geometry>
+				<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.035" length="0.01"/>
+			</geometry>
+		</visual>
+		<!-- reaction wheel inertia -->
+		<xacro:inertial_cylinder rho="5144.93" length="0.01" radius="0.035"/>
+	</link>
+
+	<joint name="reaction_wheel_joint" type="continuous">
+		<origin xyz="0 0 0.05" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+		<parent link="reaction_wheel_assembly"/>
+		<child link="reaction_wheel"/>
+	</joint>
+
+	<xacro:macro name="wheel" params="num xyz">
+		<link name="wheel_${num}">
+			<visual>
+				<geometry>
+					<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.0365" length="0.001"/>
+				</geometry>
+			</visual>
+			<xacro:collision_cylinder radius="0.0365" length="0.001"/>
+			<xacro:inertial_cylinder rho="1000" radius="0.0365" length="0.001"/>
+		</link>
+		<joint name="wheel_${num}_joint" type="continuous">
+			<origin xyz="${xyz}" rpy="${pi/2} 0 0"/>
+			<axis xyz="0 0 1"/>
+			<parent link="body"/>
+			<child link="wheel_${num}"/>
+		</joint>
+	</xacro:macro>
+
+	<xacro:wheel num="0" xyz="-0.05 0 -0.0365"/>
+	<xacro:wheel num="1" xyz="0.05 0 -0.0365"/>
+	
+</robot>

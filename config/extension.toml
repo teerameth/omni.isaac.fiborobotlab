@@ -29,6 +29,9 @@ name = "omni.isaac.fiborobotlab"
 name = "omni.isaac.fiborobotlab.mooncake.scripts.import_mooncake"
 
 [[python.module]]
+name = "omni.isaac.fiborobotlab.obike.scripts.import_obike"
+
+[[python.module]]
 name = "omni.isaac.fiborobotlab.hello_world_extension"
 
 [[python.module]]
