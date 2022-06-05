@@ -1,0 +1,60 @@
+chassis
+mass 288g
+Density	1904.26	1904.26	kg/m^3
+Center of Mass	[0.0047367, -0.00165617, 0.0191097]	[0.0047367, -0.00165617, 0.0191097]	m
+Moments of Inertia	[0.000142523, 0.000900002, 0.00095884]	[0.000142523, 0.000900002, 0.00095884]	kg*m^2
+Products of Inertia	[-2.74186e-06, 5.3044e-05, 3.77668e-05]	[-2.74186e-06, 5.3044e-05, 3.77668e-05]	kg*m^2
+
+motor mount
+Mass	67g
+Density	696.359	696.359	kg/m^3
+Center of Mass	[0.00311605, -2.39414e-08, -0.0261504]	[0.00311605, -2.39414e-08, -0.0261504]	m
+Moments of Inertia	[3.80011e-05, 8.50835e-05, 9.50647e-05]	[3.80011e-05, 8.50835e-05, 9.50647e-05]	kg*m^2
+Products of Inertia	[-1.16837e-11, -6.35148e-06, -3.93988e-11]	[-1.16837e-11, -6.35148e-06, -3.93988e-11]	kg*m^2
+
+front body
+Mass	29.8	29.8	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	992.056	992.056	kg/m^3
+Center of Mass	[0.0277492, 1.38661e-08, 0.00859761]	[0.0277492, 1.38661e-08, 0.00859761]	m
+Moments of Inertia	[7.21055e-06, 8.02622e-06, 1.19714e-05]	[7.21055e-06, 8.02622e-06, 1.19714e-05]	kg*m^2
+Products of Inertia	[-4.42397e-13, -1.61329e-06, 5.32121e-12]	[-4.42397e-13, -1.61329e-06, 5.32121e-12]	kg*m^2
+
+rear wheel Mass	27.3	27.3	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	700.624	700.624	kg/m^3
+Center of Mass	[8.66222e-10, -2.46799e-07, -5.02853e-06]	[8.66222e-10, -2.46799e-07, -5.02853e-06]	m
+Moments of Inertia	[7.92469e-06, 7.92468e-06, 1.53136e-05]	[7.92469e-06, 7.92468e-06, 1.53136e-05]	kg*m^2
+Products of Inertia	[1.27201e-13, -1.10104e-16, -1.1825e-17]	[1.27201e-13, -1.10104e-16, -1.1825e-17]	kg*m^2
+
+steering arm
+Mass	4.3	4.3	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	994.944	994.944	kg/m^3
+Center of Mass	[-6.32629e-08, 0.00613173, 0.0206668]	[-6.32629e-08, 0.00613173, 0.0206668]	m
+Moments of Inertia	[8.4523e-07, 7.98604e-07, 1.47325e-07]	[8.4523e-07, 7.98604e-07, 1.47325e-07]	kg*m^2
+Products of Inertia	[-9.6622e-08, 3.80111e-12, -2.0208e-12]	[-9.6622e-08, 3.80111e-12, -2.0208e-12]	kg*m^2
+
+reaction wheel mount
+Mass	494.7-213-198-67	494.7-213-198-67	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	1225.17	1225.17	kg/m^3
+Center of Mass	[2.36685e-08, 1.97235e-06, 0.00337371]	[2.36685e-08, 1.97235e-06, 0.00337371]	m
+Moments of Inertia	[4.07098e-06, 4.07082e-06, 7.53616e-06]	[4.07098e-06, 4.07082e-06, 7.53616e-06]	kg*m^2
+Products of Inertia	[1.64823e-10, 1.77889e-12, -5.26622e-13]	[1.64823e-10, 1.77889e-12, -5.26622e-13]	kg*m^2
+
+reaction wheel
+Mass	198	198	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	8536.13	8536.13	kg/m^3
+Center of Mass	[-1.54175e-18, 1.20555e-06, 0.006]	[-1.54175e-18, 1.20555e-06, 0.006]	m
+Moments of Inertia	[7.64738e-05, 7.64738e-05, 0.000148196]	[7.64738e-05, 7.64738e-05, 0.000148196]	kg*m^2
+Products of Inertia	[-4.11109e-22, 1.98335e-22, -1.50787e-22]	[-4.11109e-22, 1.98335e-22, -1.50787e-22]	kg*m^2
+
+front wheel
+Mass	11.6	11.6	g
+Derived Values	Derived Values	Derived Values	Derived Values
+Density	1227	1227	kg/m^3
+Center of Mass	[-9.22528e-13, -2.05375e-07, -0.000101895]	[-9.22528e-13, -2.05375e-07, -0.000101895]	m
+Moments of Inertia	[1.52351e-06, 1.52351e-06, 2.95246e-06]	[1.52351e-06, 1.52351e-06, 2.95246e-06]	kg*m^2
+Products of Inertia	[2.01001e-13, 1.55876e-17, 1.10854e-16]	[2.01001e-13, 1.55876e-17, 1.10854e-16]	kg*m^2

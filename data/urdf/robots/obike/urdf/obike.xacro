@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <robot name="obike" xmlns:xacro="http://ros.org/wiki/xacro">
+	<xacro:property name="MODEL_PATH" value="/home/fiborobotlab/urdf/robots/obike/meshes/"/>
     <xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
 		<xacro:property name="w" value="${size.split()[0]}"/>
 		<xacro:property name="d" value="${size.split()[1]}"/>
@@ -59,84 +60,148 @@
 			</geometry>
 		</collision>
 	</xacro:macro>
+	<xacro:macro name="inertial_manual" params="mass xyz:='0 0 0' rpy:='0 0 0' ixx iyy izz ixy:='0' ixz:='0' iyz:='0'">
+		<inertial>
+			<origin xyz="${xyz}" rpy="${rpy}"/>
+			<mass value="${mass}"/>
+			<inertia ixx="${ixx}" iyy="${iyy}" izz="${izz}" ixy="${ixy}" ixz="${ixz}" iyz="${iyz}"/>
+		</inertial>
+	</xacro:macro>
 
-
-	<link name="base">
-		
-	</link>
-
-    <link name="body">
+	<link name="chassic">
 		<visual>
-			<origin xyz="0 0 0" rpy="0 0 0"/>
 			<geometry>
-				<box size="0.150 0.04 0.06" xyz="0 0 0"/>
+				<mesh filename="${MODEL_PATH}chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
-		<!-- <xacro:collision_box size="0.150 0.04 0.06"/> -->
-		<xacro:inertial_box size="0.150 0.04 0.06" rho="513.89"/>
+
 	</link>
 
-    <joint name="base_joint" type="continuous">
-        <origin xyz="0 0 0.0665" rpy="0 0 0"/>
-        <axis xyz="1 0 0"/>
-		<parent link="base"/>
-		<child link="body"/>
-    </joint>
-
-	<link name="reaction_wheel_assembly">
+	<link name="motor_mount">
 		<visual>
-			<origin rpy="0 0 0"/>
 			<geometry>
-				<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.0125" length="0.08"/>
+				<mesh filename="${MODEL_PATH}motor_mount.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
-		<!-- motor inertia -->
-		<xacro:inertial_cylinder rho="5424" length="0.08" radius="0.0125"/>
+
 	</link>
 
-    <joint name="reaction_wheel_assembly_joint" type="fixed">
-        <origin xyz="0 0 0.0605" rpy="0 ${pi/2} 0"/>
-        <parent link="body"/>
-		<child link="reaction_wheel_assembly"/>
-    </joint>
+	<joint name="motor_mount_joint" type="fixed">
+		<origin xyz="-0.005 0 0.08" rpy="0 0 0"/>
+		<parent link="chassic"/>
+		<child link="motor_mount"/>
+	</joint>
+
+	<link name="front_chassic">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}front_chassic.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+
+	</link>
+
+	<joint name="front_chassic_joint" type="fixed">
+		<origin xyz="0.055 0 0.035" rpy="0 0 0"/>
+		<parent link="chassic"/>
+		<child link="front_chassic"/>
+	</joint>
+
+	<link name="front_wheel_arm">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}front_wheel_arm.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+
+	</link>
+
+	<joint name="front_wheel_arm_joint" type="continuous">
+		<origin xyz="0.107304 0 0.03901" rpy="0 ${5*pi/6} 0"/>
+		<axis xyz="0 0 1"/>
+		<parent link="chassic"/>
+		<child link="front_wheel_arm"/>
+	</joint>
+
+	<link name="front_wheel">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}front_wheel.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+
+	</link>
+
+	<joint name="front_wheel_joint" type="continuous">
+		<origin xyz="0 0 0.035" rpy="${-pi/2} 0 0"/>
+		<axis xyz="0 0 1"/>
+		<parent link="front_wheel_arm"/>
+		<child link="front_wheel"/>
+	</joint>
+
+	<link name="faulhaber">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}faulhaber.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+
+	</link>
+
+	<joint name="faulhaber_joint" type="fixed">
+		<origin xyz="0 0 0" rpy="0 ${pi/2} 0"/>
+		<parent link="motor_mount"/>
+		<child link="faulhaber"/>
+	</joint>
+
 
 	<link name="reaction_wheel">
 		<visual>
-			<origin rpy="0 0 0"/>
 			<geometry>
-				<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.035" length="0.01"/>
+				<mesh filename="${MODEL_PATH}reaction_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
-		<!-- reaction wheel inertia -->
-		<xacro:inertial_cylinder rho="5144.93" length="0.01" radius="0.035"/>
+
 	</link>
 
 	<joint name="reaction_wheel_joint" type="continuous">
-		<origin xyz="0 0 0.05" rpy="0 0 0"/>
-        <axis xyz="0 0 1"/>
-		<parent link="reaction_wheel_assembly"/>
+		<origin xyz="0.044 0 0" rpy="0 ${pi/2} 0"/>
+		<axis xyz="0 0 1"/>
+		<parent link="motor_mount"/>
 		<child link="reaction_wheel"/>
 	</joint>
 
-	<xacro:macro name="wheel" params="num xyz">
-		<link name="wheel_${num}">
-			<visual>
-				<geometry>
-					<cylinder xyz="0 0 0" rpy="0 0 0" radius="0.0365" length="0.001"/>
-				</geometry>
-			</visual>
-			<xacro:collision_cylinder radius="0.0365" length="0.001"/>
-			<xacro:inertial_cylinder rho="1000" radius="0.0365" length="0.001"/>
-		</link>
-		<joint name="wheel_${num}_joint" type="continuous">
-			<origin xyz="${xyz}" rpy="${pi/2} 0 0"/>
-			<axis xyz="0 0 1"/>
-			<parent link="body"/>
-			<child link="wheel_${num}"/>
-		</joint>
-	</xacro:macro>
+	<link name="reaction_wheel_steel">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}reaction_wheel_steel.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
 
-	<xacro:wheel num="0" xyz="-0.05 0 -0.0365"/>
-	<xacro:wheel num="1" xyz="0.05 0 -0.0365"/>
+	</link>
+
+	<joint name="reaction_wheel_steel_joint" type="fixed">
+		<origin xyz="0 0 0.004" rpy="0 0 0"/>
+		<parent link="reaction_wheel"/>
+		<child link="reaction_wheel_steel"/>
+	</joint>
+
+	<link name="rear_wheel">
+		<visual>
+			<geometry>
+				<mesh filename="${MODEL_PATH}rear_wheel.dae" scale="1 1 1"/>
+			</geometry>
+		</visual>
+
+	</link>
+
+	<joint name="rear_wheel_joint" type="continuous">
+		<origin xyz="-0.05 0 0.022" rpy="${pi/2} 0 0"/>
+		<axis xyz="0 0 1"/>
+		<parent link="chassic"/>
+		<child link="rear_wheel"/>
+	</joint>
+
+
 	
 </robot>
