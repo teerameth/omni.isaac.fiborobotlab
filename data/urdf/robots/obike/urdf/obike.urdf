@@ -7,16 +7,31 @@
   <link name="chassic">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/chassic.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/chassic.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0047367 -0.00165617 0.0191097"/>
+      <mass value="0.288"/>
+      <inertia ixx="3.80011e-05" ixy="-3.93988e-11" ixz="-6.35148e-06" iyy="8.50835e-05" iyz="-1.16837e-11" izz="9.50647e-05"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/chassic.dae" scale="1 1 1"/>
+      </geometry>
+    </collision>
   </link>
   <link name="motor_mount">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/motor_mount.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/motor_mount.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.00311605 -2.39414e-08 -0.0261504"/>
+      <mass value="0.067"/>
+      <inertia ixx="3.80011e-05" ixy="-3.93988e-11" ixz="-6.35148e-06" iyy="8.50835e-05" iyz="-1.16837e-11" izz="9.50647e-05"/>
+    </inertial>
   </link>
   <joint name="motor_mount_joint" type="fixed">
     <origin rpy="0 0 0" xyz="-0.005 0 0.08"/>
@@ -26,9 +41,19 @@
   <link name="front_chassic">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/front_chassic.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_chassic.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0277492 1.38661e-08 0.00859761"/>
+      <mass value="0.0298"/>
+      <inertia ixx="7.21055e-06" ixy="5.32121e-12" ixz="-1.61329e-06" iyy="8.02622e-06" iyz="-4.42397e-13" izz="1.19714e-05"/>
+    </inertial>
+    <!-- <collision>
+			<geometry>
+				<mesh filename="${MODEL_PATH}front_chassic.dae" scale="1 1 1"/>
+			</geometry>
+		</collision> -->
   </link>
   <joint name="front_chassic_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.055 0 0.035"/>
@@ -38,9 +63,14 @@
   <link name="front_wheel_arm">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/front_wheel_arm.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel_arm.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-6.32629e-08 0.00613173 0.0206668"/>
+      <mass value="0.0043"/>
+      <inertia ixx="8.4523e-07" ixy="-2.0208e-12" ixz="3.80111e-12" iyy="7.98604e-07" iyz="-9.6622e-08" izz="1.47325e-07"/>
+    </inertial>
   </link>
   <joint name="front_wheel_arm_joint" type="continuous">
     <origin rpy="0 2.6179938779914944 0" xyz="0.107304 0 0.03901"/>
@@ -51,9 +81,19 @@
   <link name="front_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/front_wheel.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-9.22528e-13 -2.05375e-07 -0.000101895"/>
+      <mass value="0.0116"/>
+      <inertia ixx="1.52351e-06" ixy="1.10854e-16" ixz="1.55876e-17" iyy="1.52351e-06" iyz="2.01001e-13" izz="2.95246e-06"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel.dae" scale="1 1 1"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="front_wheel_joint" type="continuous">
     <origin rpy="-1.5707963267948966 0 0" xyz="0 0 0.035"/>
@@ -64,9 +104,14 @@
   <link name="faulhaber">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/faulhaber.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/faulhaber.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="4.82201e-09 -1.77912e-19 -0.0074239"/>
+      <mass value="0.213"/>
+      <inertia ixx="0.000114919" ixy="3.73504e-22" ixz="1.44574e-11" iyy="0.000114919" iyz="-9.40735e-22" izz="1.81057e-05"/>
+    </inertial>
   </link>
   <joint name="faulhaber_joint" type="fixed">
     <origin rpy="0 1.5707963267948966 0" xyz="0 0 0"/>
@@ -76,9 +121,10 @@
   <link name="reaction_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/reaction_wheel.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/reaction_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <!-- <xacro:inertial_manual mass="" xyz="" ixx="" iyy="" izz="" iyz="" ixz="" ixy=""/> -->
   </link>
   <joint name="reaction_wheel_joint" type="continuous">
     <origin rpy="0 1.5707963267948966 0" xyz="0.044 0 0"/>
@@ -89,9 +135,20 @@
   <link name="reaction_wheel_steel">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/reaction_wheel_steel.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/reaction_wheel_steel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="2.36685e-08 1.97235e-06 0.00337371"/>
+      <mass value="0.198"/>
+      <inertia ixx="4.07098e-06" ixy="-5.26622e-13" ixz="1.77889e-12" iyy="4.07082e-06" iyz="1.64823e-10" izz="7.53616e-06"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <cylinder length="0.012" radius="0.0325"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="reaction_wheel_steel_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0.004"/>
@@ -101,9 +158,19 @@
   <link name="rear_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/fiborobotlab/urdf/robots/obike/meshes/rear_wheel.dae" scale="1 1 1"/>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/rear_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="8.66222e-10 -2.46799e-07 -5.02853e-06"/>
+      <mass value="0.0273"/>
+      <inertia ixx="7.92469e-06" ixy="-1.1825e-17" ixz="-1.10104e-16" iyy="7.92468e-06" iyz="1.27201e-13" izz="1.53136e-05"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="/home/teera/urdf/robots/obike/meshes/rear_wheel.dae" scale="1 1 1"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="rear_wheel_joint" type="continuous">
     <origin rpy="1.5707963267948966 0 0" xyz="-0.05 0 0.022"/>

@@ -139,7 +139,7 @@ class Extension(omni.ext.IExt):
                 planePath="/groundPlane",
                 axis="Z",
                 size=1500.0,
-                position=Gf.Vec3f(0, 0, 0),
+                position=Gf.Vec3f(0, 0, -10),
                 color=Gf.Vec3f(0.5),
             )
             # make sure the ground plane is under root prim and not robot
@@ -153,7 +153,7 @@ class Extension(omni.ext.IExt):
     def _on_config_robot(self):
         stage = omni.usd.get_context().get_stage()
         # make front wheel spin freely
-        prim_path = "/obike/body/wheel_1_joint"
+        prim_path = "/obike/chassic/front_wheel_joint"
         prim = stage.GetPrimAtPath(prim_path)
         omni.kit.commands.execute(
             "UnapplyAPISchemaCommand",
@@ -167,10 +167,12 @@ class Extension(omni.ext.IExt):
         # self._on_config_robot()  # make sure drives are configured first
         stage = omni.usd.get_context().get_stage()
         # set each axis to spin at a rate of 1 rad/s
-        axle_rear_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/body/wheel_0_joint"), "angular")
-        axle_reaction_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/body/reaction_wheel_joint"), "angular")
+        axle_steering = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/front_wheel_arm_joint"), "angular")
+        axle_rear_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/rear_wheel_joint"), "angular")
+        axle_reaction_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/reaction_wheel_joint"), "angular")
 
         # omega = velocity2omega(0, 0.1, 0)
         # print(omega)
-        set_drive_parameters(axle_rear_wheel, "velocity", math.degrees(1), 0, math.radians(1e7))
-        set_drive_parameters(axle_reaction_wheel, "velocity", math.degrees(1), 0, math.radians(1e7))
+        set_drive_parameters(axle_steering, "position", math.degrees(3), 0, math.radians(1e7))
+        set_drive_parameters(axle_rear_wheel, "velocity", math.degrees(-10), 0, math.radians(1e7))
+        set_drive_parameters(axle_reaction_wheel, "velocity", math.degrees(4), 0, math.radians(1e7))
