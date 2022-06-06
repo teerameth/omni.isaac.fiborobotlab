@@ -94,27 +94,28 @@ for epoch in range(1000):
     while True:
         previous['robot_position'], previous['robot_rotation'] = robot.get_world_pose()
         previous['fall_rotation'] = q2falling(previous['robot_rotation'])
+        if not _headless and _iteration_count % _display_every_iter == 0:  # limit rendering rate
+            if world.current_time_step_index * _physics_dt / _rendering_dt > render_counter:
+                render_counter += 1
+                world.render()
+
         reading = imu_interface.get_sensor_readings(_sensor_handle)
         print(reading.shape)
-        if reading.shape[0] == 0:# no valid data in buffer -> do nothing
-            world.step(render = False)
-            continue
-        # IMU will  return [???, acc_x, acc_y, acc_z, gyr_x, gyr_y, gyr_z]
-        observations = np.array([reading[-1]["lin_acc_y"],  # Use only lastest data in buffer
-                                 reading[-1]["lin_acc_z"],
-                                 reading[-1]["ang_vel_x"]])
+        if reading.shape[0] == 0:# no valid data in buffer -> init observation wih zeros
+            observations = np.array([0, 0, 0])
+        else: # IMU will  return [???, acc_x, acc_y, acc_z, gyr_x, gyr_y, gyr_z]
+            observations = np.array([reading[-1]["lin_acc_y"],  # Use only lastest data in buffer
+                                    reading[-1]["lin_acc_z"],
+                                    reading[-1]["ang_vel_x"]])
         ## Scale observations -> (0, 1) for NN inputs
-
+        observations = np.array(observations, dtype=np.float32).reshape((-1, 3))  # add extra dimension for batch_size=1
         ## EXECUTE ACTION in train step ##
         with tf.GradientTape() as tape:
             logits = model.call(inputs=observations, states=states, return_state=True, training=True)
             from omni.isaac.core.utils.types import ArticulationAction
-            robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, None, None], joint_positions=[None, 0, 0]))
+            robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
             world.step(render=True)
-            if not _headless and _iteration_count % _display_every_iter == 0:   # limit rendering rate
-                if world.current_time_step_index * _physics_dt / _rendering_dt > render_counter:
-                    render_counter += 1
-                    world.render()
+
             robot_position, robot_rotation = robot.get_world_pose()
             fall_rotation = q2falling(robot_rotation)
             delta_fall = fall_rotation - previous['fall_rotation']

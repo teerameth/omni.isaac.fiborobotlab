@@ -22,12 +22,6 @@ from omni.isaac.ui.ui_utils import setup_ui_headers, get_style, btn_builder
 
 EXTENSION_NAME = "Import O-Bike"
 
-def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):
-    omega_0 = (v_x-d*w_z)/r
-    omega_1 = -(v_x-math.sqrt(3)*v_y+2*d*w_z)/(2*r)
-    omega_2 = -(v_x+math.sqrt(3)*v_y+2*d*w_z)/(2*r)
-    return [omega_0, omega_1, omega_2]
-
 class Extension(omni.ext.IExt):
     def on_startup(self, ext_id: str):
         ext_manager = omni.kit.app.get_app().get_extension_manager()
