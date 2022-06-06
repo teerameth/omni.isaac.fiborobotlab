@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <robot name="obike" xmlns:xacro="http://ros.org/wiki/xacro">
-	<xacro:property name="MODEL_PATH" value="/home/teera/urdf/robots/obike/meshes/"/>
     <xacro:macro name="inertial_box" params="size rho:=1000 xyz:='0 0 0' rpy:='0 0 0'">
 		<xacro:property name="w" value="${size.split()[0]}"/>
 		<xacro:property name="d" value="${size.split()[1]}"/>
@@ -71,13 +70,13 @@
 	<link name="chassic">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}chassic.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.288" xyz="0.0047367 -0.00165617 0.0191097" ixx="3.80011e-05" iyy="8.50835e-05" izz="9.50647e-05" iyz="-1.16837e-11" ixz="-6.35148e-06" ixy="-3.93988e-11"/>
 		<collision>
 			<geometry>
-				<mesh filename="${MODEL_PATH}chassic.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</collision>
 	</link>
@@ -85,7 +84,7 @@
 	<link name="motor_mount">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}motor_mount.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.067" xyz="0.00311605 -2.39414e-08 -0.0261504" ixx="3.80011e-05" iyy="8.50835e-05" izz="9.50647e-05" iyz="-1.16837e-11" ixz="-6.35148e-06" ixy="-3.93988e-11"/>
@@ -100,13 +99,13 @@
 	<link name="front_chassic">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_chassic.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.0298" xyz="0.0277492 1.38661e-08 0.00859761" ixx="7.21055e-06" iyy="8.02622e-06" izz="1.19714e-05" iyz="-4.42397e-13" ixz="-1.61329e-06" ixy="5.32121e-12"/>
 		<!-- <collision>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_chassic.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</collision> -->
 	</link>
@@ -120,7 +119,7 @@
 	<link name="front_wheel_arm">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_wheel_arm.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_wheel_arm.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.0043" xyz="-6.32629e-08 0.00613173 0.0206668" ixx="8.4523e-07" iyy="7.98604e-07" izz="1.47325e-07" iyz="-9.6622e-08" ixz="3.80111e-12" ixy="-2.0208e-12"/>
@@ -137,13 +136,13 @@
 	<link name="front_wheel">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_wheel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.0116" xyz="-9.22528e-13 -2.05375e-07 -0.000101895" ixx="1.52351e-06" iyy="1.52351e-06" izz="2.95246e-06" iyz="2.01001e-13" ixz="1.55876e-17" ixy="1.10854e-16"/>
 		<collision>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_wheel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</collision>
 	</link>
@@ -158,7 +157,7 @@
 	<link name="faulhaber">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}faulhaber.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/faulhaber.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.213" xyz="4.82201e-09 -1.77912e-19 -0.0074239" ixx="0.000114919" iyy="0.000114919" izz="1.81057e-05" iyz="-9.40735e-22" ixz="1.44574e-11" ixy="3.73504e-22"/>
@@ -175,7 +174,7 @@
 	<link name="reaction_wheel">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}reaction_wheel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/reaction_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<!-- <xacro:inertial_manual mass="" xyz="" ixx="" iyy="" izz="" iyz="" ixz="" ixy=""/> -->
@@ -191,7 +190,7 @@
 	<link name="reaction_wheel_steel">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}reaction_wheel_steel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/reaction_wheel_steel.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.198" xyz="2.36685e-08 1.97235e-06 0.00337371" ixx="4.07098e-06" iyy="4.07082e-06" izz="7.53616e-06" iyz="1.64823e-10" ixz="1.77889e-12" ixy="-5.26622e-13"/>
@@ -207,13 +206,13 @@
 	<link name="rear_wheel">
 		<visual>
 			<geometry>
-				<mesh filename="${MODEL_PATH}rear_wheel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/rear_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</visual>
 		<xacro:inertial_manual mass="0.0273" xyz="8.66222e-10 -2.46799e-07 -5.02853e-06" ixx="7.92469e-06" iyy="7.92468e-06" izz="1.53136e-05" iyz="1.27201e-13" ixz="-1.10104e-16" ixy="-1.1825e-17"/>
 		<collision>
 			<geometry>
-				<mesh filename="${MODEL_PATH}rear_wheel.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/rear_wheel.dae" scale="1 1 1"/>
 			</geometry>
 		</collision>
 	</link>

@@ -7,7 +7,7 @@
   <link name="chassic">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/chassic.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/chassic.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -17,14 +17,14 @@
     </inertial>
     <collision>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/chassic.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/chassic.dae" scale="1 1 1"/>
       </geometry>
     </collision>
   </link>
   <link name="motor_mount">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/motor_mount.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/motor_mount.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -41,7 +41,7 @@
   <link name="front_chassic">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_chassic.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/front_chassic.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -51,7 +51,7 @@
     </inertial>
     <!-- <collision>
 			<geometry>
-				<mesh filename="${MODEL_PATH}front_chassic.dae" scale="1 1 1"/>
+				<mesh filename="package://meshes/front_chassic.dae" scale="1 1 1"/>
 			</geometry>
 		</collision> -->
   </link>
@@ -63,7 +63,7 @@
   <link name="front_wheel_arm">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel_arm.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/front_wheel_arm.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -81,7 +81,7 @@
   <link name="front_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/front_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -91,7 +91,7 @@
     </inertial>
     <collision>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/front_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/front_wheel.dae" scale="1 1 1"/>
       </geometry>
     </collision>
   </link>
@@ -104,7 +104,7 @@
   <link name="faulhaber">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/faulhaber.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/faulhaber.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -121,7 +121,7 @@
   <link name="reaction_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/reaction_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/reaction_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <!-- <xacro:inertial_manual mass="" xyz="" ixx="" iyy="" izz="" iyz="" ixz="" ixy=""/> -->
@@ -135,7 +135,7 @@
   <link name="reaction_wheel_steel">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/reaction_wheel_steel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/reaction_wheel_steel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -158,7 +158,7 @@
   <link name="rear_wheel">
     <visual>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/rear_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/rear_wheel.dae" scale="1 1 1"/>
       </geometry>
     </visual>
     <inertial>
@@ -168,7 +168,7 @@
     </inertial>
     <collision>
       <geometry>
-        <mesh filename="/home/teera/urdf/robots/obike/meshes/rear_wheel.dae" scale="1 1 1"/>
+        <mesh filename="package://meshes/rear_wheel.dae" scale="1 1 1"/>
       </geometry>
     </collision>
   </link>
