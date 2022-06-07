@@ -36,11 +36,6 @@ _update_every = 5
 _headless = False
 simulation_app = SimulationApp({"headless": _headless, "anti_aliasing": 0})
 
-## Train parameter ##
-n_episodes = 1000
-batch_size = 1
-lstm_nodes = 32
-
 ## Setup World ##
 from omni.isaac.core import World
 from obike import Obike
@@ -51,7 +46,7 @@ robot = world.scene.add(
     Obike(
             prim_path="/obike",
             name="obike_mk0",
-            position=np.array([0, 0.0, 30.0]),
+            position=np.array([0, 0.0, 10.0]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
     )
 )
@@ -68,54 +63,80 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+## Train parameter ##
+n_episodes = 1000
+input_dim =	3
+output_dim = 1
+num_timesteps =	1
+batch_size = 1
+lstm_nodes = 32
 
+input_layer = tf.keras.Input(shape=(num_timesteps, input_dim), batch_size=batch_size)
+lstm_cell = tf.keras.layers.LSTMCell(
+    lstm_nodes,
+    kernel_initializer='glorot_uniform',
+    recurrent_initializer='glorot_uniform',
+    bias_initializer='zeros',
+)
+lstm_layer = tf.keras.layers.RNN(
+    lstm_cell,
+    return_state=True,
+    return_sequences=True,
+    stateful=True,
+)
+lstm_out, hidden_state, cell_state = lstm_layer(input_layer)
+output = tf.keras.layers.Dense(output_dim)(lstm_out)
+model = tf.keras.Model(
+    inputs=input_layer,
+    outputs=[hidden_state, cell_state, output]
+)
 
-class SimpleLSTM(keras.Model):
-    def __init__(self, lstm_units, num_output):
-        super().__init__(self)
-        cell = layers.LSTMCell(lstm_units,
-                               kernel_initializer='glorot_uniform',
-                               recurrent_initializer='glorot_uniform',
-                               bias_initializer='zeros')
-        self.lstm = tf.keras.layers.RNN(cell,
-                                        return_state = True,
-                                        return_sequences=True,
-                                        stateful=False)
-        lstm_out, hidden_state, cell_state = self.lstm(input_layer)
-
-
-        self.lstm1 = layers.LSTM(lstm_units, return_sequences=True, return_state=True)
-        self.dense = layers.Dense(num_output)
-
-    def get_zero_initial_state(self, inputs):
-        return [tf.zeros((batch_size, lstm_nodes)), tf.zeros((batch_size, lstm_nodes))]
-    def __call__(self, inputs, states = None):
-        if states is None:
-            self.lstm.get_initial_state = self.get_zero_initial_state
-    def call(self, inputs, states=None, return_state = False, training=False):
-        x = inputs
-        if states is None: states = self.lstm1.get_initial_state(x) # state shape = (2, batch_size, lstm_units)
-        print(x.shape)
-        print(len(states))
-        print(states[0].shape)
-        x, sequence, states = self.lstm1(x, initial_state=states, training=training)
-        x = self.dense(x, training=training)
-
-        if return_state: return x, states
-        else: return x
-    @tf.function
-    def train_step(self, inputs):
-        inputs, labels = inputs
-        with tf.GradientTape() as tape:
-            predictions = self(inputs, training=True)
-            loss = self.loss(labels, predictions)
-        grads = tape.gradient(loss, model.trainable_variables)
-        self.optimizer.apply_gradients(zip(grads, model.trainable_variables))
-
-        return {'loss': loss}
-model = SimpleLSTM(lstm_units=8, num_output=1)
-model.build(input_shape=(None, 1, 3))
-model.summary()
+# class SimpleLSTM(keras.Model):
+#     def __init__(self, lstm_units, num_output):
+#         super().__init__(self)
+#         cell = layers.LSTMCell(lstm_units,
+#                                kernel_initializer='glorot_uniform',
+#                                recurrent_initializer='glorot_uniform',
+#                                bias_initializer='zeros')
+#         self.lstm = tf.keras.layers.RNN(cell,
+#                                         return_state = True,
+#                                         return_sequences=True,
+#                                         stateful=False)
+#         lstm_out, hidden_state, cell_state = self.lstm(input_layer)
+#
+#
+#         self.lstm1 = layers.LSTM(lstm_units, return_sequences=True, return_state=True)
+#         self.dense = layers.Dense(num_output)
+#
+#     def get_zero_initial_state(self, inputs):
+#         return [tf.zeros((batch_size, lstm_nodes)), tf.zeros((batch_size, lstm_nodes))]
+#     def __call__(self, inputs, states = None):
+#         if states is None:
+#             self.lstm.get_initial_state = self.get_zero_initial_state
+#     def call(self, inputs, states=None, return_state = False, training=False):
+#         x = inputs
+#         if states is None: states = self.lstm1.get_initial_state(x) # state shape = (2, batch_size, lstm_units)
+#         print(x.shape)
+#         print(len(states))
+#         print(states[0].shape)
+#         x, sequence, states = self.lstm1(x, initial_state=states, training=training)
+#         x = self.dense(x, training=training)
+#
+#         if return_state: return x, states
+#         else: return x
+#     @tf.function
+#     def train_step(self, inputs):
+#         inputs, labels = inputs
+#         with tf.GradientTape() as tape:
+#             predictions = self(inputs, training=True)
+#             loss = self.loss(labels, predictions)
+#         grads = tape.gradient(loss, model.trainable_variables)
+#         self.optimizer.apply_gradients(zip(grads, model.trainable_variables))
+#
+#         return {'loss': loss}
+# model = SimpleLSTM(lstm_units=8, num_output=1)
+# model.build(input_shape=(None, 1, 3))
+# model.summary()
 
 optimizer = tf.optimizers.Adam(learning_rate=0.0025)
 loss_fn = keras.losses.MeanSquaredError()  # Instantiate a loss function.
@@ -129,6 +150,7 @@ for e in range(n_episodes):
     print("\nStart of episodes %d" % (e,))
     # Reset the environment
     world.reset()
+    lstm_layer.reset_states(states=[np.zeros((batch_size, lstm_nodes)), np.zeros((batch_size, lstm_nodes))])
     previous_states = None  # reset LSTM's internal state
     render_counter = 0
 
@@ -150,10 +172,11 @@ for e in range(n_episodes):
                                     reading[-1]["ang_vel_x"]])
         ## Scale observations from (-10, 10) -> (0, 1) for NN inputs
         observations = observations / 20 + 0.5
-        observations = np.array(observations, dtype=np.float32).reshape((-1, 3))  # add extra dimension for batch_size=1
+        observations = np.array(observations, dtype=np.float32).reshape((batch_size, num_timesteps, input_dim))  # add extra dimension for batch_size=1
         with tf.GradientTape() as tape:
             # forward pass
-            logits, previous_states = model.call(inputs=observations, states=previous_states, return_state=True, training=True)
+            h_state, c_state, logits = model(observations)    # required input_shape=(None, 1, 3)
+            # logits, previous_states = model.call(inputs=observations, states=previous_states, return_state=True, training=True)
             a_dist = logits.numpy()
             ## Choose random action with p = action dist
             print("A_DIST")
@@ -169,6 +192,7 @@ for e in range(n_episodes):
         print("LOGITS")
         print(logits)
         robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
+        world.step(render=True)
         present['robot_position'], present['robot_rotation'] = robot.get_world_pose()
         present['fall_rotation'] = q2falling(present['robot_rotation'])
         reward = previous['fall_rotation'] - present['fall_rotation']   # calculate reward from movement toward center
