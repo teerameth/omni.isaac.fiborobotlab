@@ -8,7 +8,13 @@ import carb
 from omni.isaac.kit import SimulationApp
 from omni.isaac.imu_sensor import _imu_sensor
 
-
+def discount_rewards(r, gamma=0.8):
+    discounted_r = np.zeros_like(r)
+    running_add = 0
+    for t in reversed(range(0, r.size)):
+        running_add = running_add * gamma + r[t]
+        discounted_r[t] = running_add
+    return discounted_r
 
 def q2falling(q):
     q[0] = 1 if q[0] > 1 else q[0]
@@ -26,10 +32,14 @@ _rendering_dt = 1/30
 _max_episode_length = 60/_physics_dt # 60 second after reset
 _iteration_count = 0
 _display_every_iter = 1
+_update_every = 5
 _headless = False
 simulation_app = SimulationApp({"headless": _headless, "anti_aliasing": 0})
 
 ## Train parameter ##
+n_episodes = 1000
+batch_size = 1
+lstm_nodes = 32
 
 ## Setup World ##
 from omni.isaac.core import World
@@ -58,15 +68,32 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+
+
 class SimpleLSTM(keras.Model):
-    def __init__(self, num_input, embedding_dim, lstm_units, num_output):
+    def __init__(self, lstm_units, num_output):
         super().__init__(self)
-        self.embedding = layers.Embedding(num_input, embedding_dim)
+        cell = layers.LSTMCell(lstm_units,
+                               kernel_initializer='glorot_uniform',
+                               recurrent_initializer='glorot_uniform',
+                               bias_initializer='zeros')
+        self.lstm = tf.keras.layers.RNN(cell,
+                                        return_state = True,
+                                        return_sequences=True,
+                                        stateful=False)
+        lstm_out, hidden_state, cell_state = self.lstm(input_layer)
+
+
         self.lstm1 = layers.LSTM(lstm_units, return_sequences=True, return_state=True)
         self.dense = layers.Dense(num_output)
+
+    def get_zero_initial_state(self, inputs):
+        return [tf.zeros((batch_size, lstm_nodes)), tf.zeros((batch_size, lstm_nodes))]
+    def __call__(self, inputs, states = None):
+        if states is None:
+            self.lstm.get_initial_state = self.get_zero_initial_state
     def call(self, inputs, states=None, return_state = False, training=False):
         x = inputs
-        x = self.embedding(x, training=training)
         if states is None: states = self.lstm1.get_initial_state(x) # state shape = (2, batch_size, lstm_units)
         print(x.shape)
         print(len(states))
@@ -86,32 +113,35 @@ class SimpleLSTM(keras.Model):
         self.optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         return {'loss': loss}
-model = SimpleLSTM(num_input=3, embedding_dim=4, lstm_units=8, num_output=1)
-model.build(input_shape=(None, 3))
+model = SimpleLSTM(lstm_units=8, num_output=1)
+model.build(input_shape=(None, 1, 3))
 model.summary()
 
 optimizer = tf.optimizers.Adam(learning_rate=0.0025)
 loss_fn = keras.losses.MeanSquaredError()  # Instantiate a loss function.
 # train_mse_metric = keras.metrics.MeanSquaredError()
 
-for epoch in range(1000):
-    print("\nStart of epoch %d" % (epoch,))
-    train_loss = []
-    ## loop until robot fall or exceed time limit (1 iteration = 1 batch)
+scores = []
+gradBuffer = model.trainable_variables
+for ix, grad in enumerate(gradBuffer): gradBuffer[ix] = grad * 0
+
+for e in range(n_episodes):
+    print("\nStart of episodes %d" % (e,))
+    # Reset the environment
+    world.reset()
+    previous_states = None  # reset LSTM's internal state
     render_counter = 0
-    previous = {'robot_position':None, 'robot_rotation':None, 'fall_rotation':None}
-    previous_states = None  # internal state of LSTM
-    while True:
+
+    ep_memory = []
+    ep_score = 0
+    done = False
+    previous = {'robot_position': None, 'robot_rotation': None, 'fall_rotation': None}
+    present = {'robot_position': None, 'robot_rotation': None, 'fall_rotation': None}
+
+    while not done:
         previous['robot_position'], previous['robot_rotation'] = robot.get_world_pose()
         previous['fall_rotation'] = q2falling(previous['robot_rotation'])
-
-        if not _headless and _iteration_count % _display_every_iter == 0:  # limit rendering rate
-            if world.current_time_step_index * _physics_dt / _rendering_dt > render_counter:
-                render_counter += 1
-                world.render()
-
         reading = imu_interface.get_sensor_readings(_sensor_handle)
-        print(reading.shape)
         if reading.shape[0] == 0:# no valid data in buffer -> init observation wih zeros
             observations = np.array([0, 0, 0])
         else: # IMU will  return [???, acc_x, acc_y, acc_z, gyr_x, gyr_y, gyr_z]
@@ -119,32 +149,49 @@ for epoch in range(1000):
                                     reading[-1]["lin_acc_z"],
                                     reading[-1]["ang_vel_x"]])
         ## Scale observations from (-10, 10) -> (0, 1) for NN inputs
-        observations = observations/20 + 0.5
+        observations = observations / 20 + 0.5
         observations = np.array(observations, dtype=np.float32).reshape((-1, 3))  # add extra dimension for batch_size=1
-        ## EXECUTE ACTION in train step ##
         with tf.GradientTape() as tape:
+            # forward pass
             logits, previous_states = model.call(inputs=observations, states=previous_states, return_state=True, training=True)
-            from omni.isaac.core.utils.types import ArticulationAction
-            # robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
-            world.step(render=True)
-            robot_position, robot_rotation = robot.get_world_pose()
-            fall_rotation = q2falling(robot_rotation)
-            delta_fall = fall_rotation - previous['fall_rotation']
-            loss_value = tf.convert_to_tensor(-delta_fall, dtype=tf.float32)  # loss got higher when falling
-            # tape.watch(loss_value)
-        grads = tape.gradient(loss_value, model.trainable_weights)
-        print("GRAD")
-        print(grads)
-        optimizer.apply_gradients(zip(grads, model.trainable_weights))
-        # train_mse_metric.update_state(y, logits)  # update training matric
-        train_loss.append(loss_value)
+            a_dist = logits.numpy()
+            ## Choose random action with p = action dist
+            print("A_DIST")
+            print(a_dist)
+            # a = np.random.choice(a_dist[0], p=a_dist[0])
+            # a = np.argmax(a_dist == a)
+            a = np.random.rand(*a_dist.shape)    # random with uniform distribution (.shape will return tuple so unpack with *)
+            loss = loss_fn([a], logits)
+            # loss = previous['fall_rotation']
 
+        ## EXECUTE ACTION ##
+        from omni.isaac.core.utils.types import ArticulationAction
+        print("LOGITS")
+        print(logits)
+        robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
+        present['robot_position'], present['robot_rotation'] = robot.get_world_pose()
+        present['fall_rotation'] = q2falling(present['robot_rotation'])
+        reward = previous['fall_rotation'] - present['fall_rotation']   # calculate reward from movement toward center
         ## Check for stop event ##
         exceed_time_limit = world.current_time_step_index >= _max_episode_length
-        robot_fall = True if previous['fall_rotation'] > 15 / 180 * math.pi else False  # if angle from normal line > 50deg mean it going to fall for sure
-        if exceed_time_limit or robot_fall:
-            ## RESET ENV ##
-            world.reset()
-            render_counter = 0
-            _iteration_count += 1
-            break   # Exti iteration
+        robot_fall = True if previous['fall_rotation'] > 15 / 180 * math.pi else False
+        done = exceed_time_limit or robot_fall
+        ep_score += reward
+        if done: reward-= 10 # small trick to make training faster
+        grads = tape.gradient(loss, model.trainable_weights)
+        ep_memory.append([grads, reward])
+    scores.append(ep_score)
+    # Discount the rewards
+    ep_memory = np.array(ep_memory)
+    ep_memory[:, 1] = discount_rewards(ep_memory[:, 1])
+
+    for grads, reward in ep_memory:
+        for ix, grad in enumerate(grads):
+            gradBuffer[ix] += grad * reward
+
+    if e % _update_every == 0:
+        optimizer.apply_gradients(zip(gradBuffer, model.trainable_variables))
+        for ix, grad in enumerate(gradBuffer): gradBuffer[ix] = grad * 0
+
+    if e % 100 == 0:
+        print("Episode {} Score {}".format(e, np.mean(scores[-100:])))
