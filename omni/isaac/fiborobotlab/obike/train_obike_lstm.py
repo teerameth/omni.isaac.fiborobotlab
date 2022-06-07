@@ -76,8 +76,18 @@ class SimpleLSTM(keras.Model):
 
         if return_state: return x, states
         else: return x
-model = SimpleLSTM(num_input=3, embedding_dim=8, lstm_units=16, num_output=1)
-model.build(input_shape=(1, 3))
+    @tf.function
+    def train_step(self, inputs):
+        inputs, labels = inputs
+        with tf.GradientTape() as tape:
+            predictions = self(inputs, training=True)
+            loss = self.loss(labels, predictions)
+        grads = tape.gradient(loss, model.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        return {'loss': loss}
+model = SimpleLSTM(num_input=3, embedding_dim=4, lstm_units=8, num_output=1)
+model.build(input_shape=(None, 3))
 model.summary()
 
 optimizer = tf.optimizers.Adam(learning_rate=0.0025)
@@ -90,10 +100,11 @@ for epoch in range(1000):
     ## loop until robot fall or exceed time limit (1 iteration = 1 batch)
     render_counter = 0
     previous = {'robot_position':None, 'robot_rotation':None, 'fall_rotation':None}
-    states = None  # internal state of LSTM
+    previous_states = None  # internal state of LSTM
     while True:
         previous['robot_position'], previous['robot_rotation'] = robot.get_world_pose()
         previous['fall_rotation'] = q2falling(previous['robot_rotation'])
+
         if not _headless and _iteration_count % _display_every_iter == 0:  # limit rendering rate
             if world.current_time_step_index * _physics_dt / _rendering_dt > render_counter:
                 render_counter += 1
@@ -107,23 +118,26 @@ for epoch in range(1000):
             observations = np.array([reading[-1]["lin_acc_y"],  # Use only lastest data in buffer
                                     reading[-1]["lin_acc_z"],
                                     reading[-1]["ang_vel_x"]])
-        ## Scale observations -> (0, 1) for NN inputs
+        ## Scale observations from (-10, 10) -> (0, 1) for NN inputs
+        observations = observations/20 + 0.5
         observations = np.array(observations, dtype=np.float32).reshape((-1, 3))  # add extra dimension for batch_size=1
         ## EXECUTE ACTION in train step ##
         with tf.GradientTape() as tape:
-            logits = model.call(inputs=observations, states=states, return_state=True, training=True)
+            logits, previous_states = model.call(inputs=observations, states=previous_states, return_state=True, training=True)
             from omni.isaac.core.utils.types import ArticulationAction
-            robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
+            # robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
             world.step(render=True)
-
             robot_position, robot_rotation = robot.get_world_pose()
             fall_rotation = q2falling(robot_rotation)
             delta_fall = fall_rotation - previous['fall_rotation']
-            loss_value = -delta_fall    # loss got higher when falling
-            grads = tape.gradient(loss_value, model.trainable_weights)
-            optimizer.apply_gradients(zip(grads, model.trainable_weights))
-            # train_mse_metric.update_state(y, logits)  # update training matric
-            train_loss.append(loss_value)
+            loss_value = tf.convert_to_tensor(-delta_fall, dtype=tf.float32)  # loss got higher when falling
+            # tape.watch(loss_value)
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        print("GRAD")
+        print(grads)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+        # train_mse_metric.update_state(y, logits)  # update training matric
+        train_loss.append(loss_value)
 
         ## Check for stop event ##
         exceed_time_limit = world.current_time_step_index >= _max_episode_length
