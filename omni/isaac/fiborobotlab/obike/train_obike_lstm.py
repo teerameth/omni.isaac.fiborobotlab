@@ -46,7 +46,7 @@ robot = world.scene.add(
     Obike(
             prim_path="/obike",
             name="obike_mk0",
-            position=np.array([0, 0.0, 10.0]),
+            position=np.array([0, 0.0, 1.435]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
     )
 )
@@ -64,7 +64,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 ## Train parameter ##
-n_episodes = 1000
+n_episodes = 10000
 input_dim =	3
 output_dim = 1
 num_timesteps =	1
@@ -147,7 +147,7 @@ gradBuffer = model.trainable_variables
 for ix, grad in enumerate(gradBuffer): gradBuffer[ix] = grad * 0
 
 for e in range(n_episodes):
-    print("\nStart of episodes %d" % (e,))
+    # print("\nStart of episodes %d" % (e,))
     # Reset the environment
     world.reset()
     lstm_layer.reset_states(states=[np.zeros((batch_size, lstm_nodes)), np.zeros((batch_size, lstm_nodes))])
@@ -179,19 +179,19 @@ for e in range(n_episodes):
             # logits, previous_states = model.call(inputs=observations, states=previous_states, return_state=True, training=True)
             a_dist = logits.numpy()
             ## Choose random action with p = action dist
-            print("A_DIST")
-            print(a_dist)
+            # print("A_DIST")
+            # print(a_dist)
             # a = np.random.choice(a_dist[0], p=a_dist[0])
             # a = np.argmax(a_dist == a)
-            a = np.random.rand(*a_dist.shape)    # random with uniform distribution (.shape will return tuple so unpack with *)
+            a = a_dist + 0.1*((np.random.rand(*a_dist.shape))-0.5)    # random with uniform distribution (.shape will return tuple so unpack with *)
             loss = loss_fn([a], logits)
             # loss = previous['fall_rotation']
 
         ## EXECUTE ACTION ##
         from omni.isaac.core.utils.types import ArticulationAction
-        print("LOGITS")
-        print(logits)
-        robot.apply_wheel_actions(ArticulationAction(joint_efforts=[logits, 0, 0]))
+        # print("LOGITS")
+        # print(logits)
+        robot.apply_wheel_actions(ArticulationAction(joint_efforts=[a*10000*0.607, 0, 0]))
         world.step(render=True)
         present['robot_position'], present['robot_rotation'] = robot.get_world_pose()
         present['fall_rotation'] = q2falling(present['robot_rotation'])
@@ -201,7 +201,7 @@ for e in range(n_episodes):
         robot_fall = True if previous['fall_rotation'] > 15 / 180 * math.pi else False
         done = exceed_time_limit or robot_fall
         ep_score += reward
-        if done: reward-= 10 # small trick to make training faster
+        # if done: reward-= 10 # small trick to make training faster
         grads = tape.gradient(loss, model.trainable_weights)
         ep_memory.append([grads, reward])
     scores.append(ep_score)

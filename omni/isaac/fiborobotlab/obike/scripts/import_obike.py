@@ -133,7 +133,7 @@ class Extension(omni.ext.IExt):
                 planePath="/groundPlane",
                 axis="Z",
                 size=1500.0,
-                position=Gf.Vec3f(0, 0, -10),
+                position=Gf.Vec3f(0, 0, 0),
                 color=Gf.Vec3f(0.5),
             )
             # make sure the ground plane is under root prim and not robot
