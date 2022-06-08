@@ -32,7 +32,7 @@ _rendering_dt = 1/30
 _max_episode_length = 60/_physics_dt # 60 second after reset
 _iteration_count = 0
 _display_every_iter = 1
-_update_every = 5
+_update_every = 1
 _headless = False
 simulation_app = SimulationApp({"headless": _headless, "anti_aliasing": 0})
 
@@ -170,8 +170,13 @@ for e in range(n_episodes):
             observations = np.array([reading[-1]["lin_acc_y"],  # Use only lastest data in buffer
                                     reading[-1]["lin_acc_z"],
                                     reading[-1]["ang_vel_x"]])
-        ## Scale observations from (-10, 10) -> (0, 1) for NN inputs
-        observations = observations / 20 + 0.5
+        ## Scale accel from (-1000, 1000) -> (0, 1) for NN inputs
+        ## Scale gyro from (-4.36, 4.36) -> (0, 1) for NN inputs (4.36 rad = 250 deg)
+        # print(observations)
+        # time.sleep(1)
+        observations[0] = (observations[0] / 2000) + 0.5
+        observations[1] = (observations[1] / 2000) + 0.5
+        observations[2] = (observations[2] / 8.72) + 0.5
         observations = np.array(observations, dtype=np.float32).reshape((batch_size, num_timesteps, input_dim))  # add extra dimension for batch_size=1
         with tf.GradientTape() as tape:
             # forward pass
@@ -191,14 +196,14 @@ for e in range(n_episodes):
         from omni.isaac.core.utils.types import ArticulationAction
         # print("LOGITS")
         # print(logits)
-        robot.apply_wheel_actions(ArticulationAction(joint_efforts=[a*10000*0.607, 0, 0]))
+        robot.apply_wheel_actions(ArticulationAction(joint_efforts=[a*100*0.607, 0, 0]))
         world.step(render=True)
         present['robot_position'], present['robot_rotation'] = robot.get_world_pose()
         present['fall_rotation'] = q2falling(present['robot_rotation'])
         reward = previous['fall_rotation'] - present['fall_rotation']   # calculate reward from movement toward center
         ## Check for stop event ##
         exceed_time_limit = world.current_time_step_index >= _max_episode_length
-        robot_fall = True if previous['fall_rotation'] > 15 / 180 * math.pi else False
+        robot_fall = True if previous['fall_rotation'] > 25 / 180 * math.pi else False
         done = exceed_time_limit or robot_fall
         ep_score += reward
         # if done: reward-= 10 # small trick to make training faster
