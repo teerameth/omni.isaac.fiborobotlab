@@ -1,3 +1,5 @@
 *.pyc
 .idea/*
 omni/isaac/fiborobotlab/mooncake/examples/wandb/*
+omni/isaac/fiborobotlab/obike/.idea/*
+omni/isaac/fiborobotlab/mooncake/.idea/*
