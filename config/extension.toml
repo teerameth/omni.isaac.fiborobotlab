@@ -32,10 +32,16 @@ name = "omni.isaac.fiborobotlab.mooncake.scripts.import_mooncake"
 name = "omni.isaac.fiborobotlab.obike.scripts.import_obike"
 
 [[python.module]]
+name = "omni.isaac.fiborobotlab.taufinder.scripts.import_taufinder"
+
+[[python.module]]
 name = "omni.isaac.fiborobotlab.hello_world_extension"
 
 [[python.module]]
 name = "omni.isaac.fiborobotlab.hello_world"
+
+[[python.module]]
+name = "omni.isaac.fiborobotlab.hanuman.scripts.import_hanuman"
 
 [[native.plugin]]
 path = "bin/*.plugin"
