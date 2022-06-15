@@ -59,7 +59,7 @@ class ObikeEnv(gym.Env):
             Obike(
                 prim_path="/obike",
                 name="obike_mk0",
-                position=np.array([0, 0.0, 1.435]),
+                position=np.array([0, 0.0, 2]),
                 orientation=np.array([1.0, 0.0, 0.0, 0.0]),
             )
         )
@@ -71,9 +71,12 @@ class ObikeEnv(gym.Env):
         self.props.sensorPeriod = 1 / 500  # 2ms
         self._sensor_handle = self.imu_interface.add_sensor_on_body("/obike/chassic", self.props)
 
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1000, high=1000, shape=(3,), dtype=np.float32)
     def step(self, action):
         ## EXECUTE ACTION ##
         from omni.isaac.core.utils.types import ArticulationAction
+        action = (action-0.5)+random.random()*0.01
         self.robot.apply_wheel_actions(ArticulationAction(joint_efforts=[action * 100 * 0.607, 0, 0]))
         self.world.step(render=not self._headless)
         observations = self.get_observation()
@@ -83,20 +86,24 @@ class ObikeEnv(gym.Env):
         robot_fall = True if observations['fall_rotation'] > 25 / 180 * math.pi else False
         done = exceed_time_limit or robot_fall
         info = {}
-        return observations, reward, done, info
+
+        obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
+        return obs, reward, done, info
     def reset(self):
         self.world.reset()
-        self.world.scene.remove("/obike")
-        from obike import Obike
-        self.robot = self.world.scene.add(
-            Obike(
-                prim_path="/obike",
-                name="obike_mk0",
-                position=np.array([10 * random.random(), 10 * random.random(), 1.435]),
-                orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            )
-        )
-        return self.get_observation()
+        # self.world.scene.remove("/obike")
+        # from obike import Obike
+        # self.robot = self.world.scene.add(
+        #     Obike(
+        #         prim_path="/obike",
+        #         name="obike_mk0",
+        #         position=np.array([10 * random.random(), 10 * random.random(), 1.435]),
+        #         orientation=np.array([1.0, 0.0, 0.0, 0.0]),
+        #     )
+        # )
+        observations = self.get_observation()
+        obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
+        return obs
     def get_observation(self):
         observations = {"robot_position_x":None, "robot_position_y":None, "robot_position_z":None, "robot_rotation_x":None, "robot_rotation_y":None, "robot_rotation_z":None, "robot_rotation_w":None, "lin_acc_x":None, "lin_acc_y":None, "lin_acc_z":None, "ang_vel_x":None, "ang_vel_y":None, "ang_vel_z":None}
         [observations["robot_position_x"], observations["robot_position_y"], observations["robot_position_z"]], [observations["robot_rotation_x"], observations["robot_rotation_y"], observations["robot_rotation_z"], observations["robot_rotation_w"]] = self.robot.get_world_pose()

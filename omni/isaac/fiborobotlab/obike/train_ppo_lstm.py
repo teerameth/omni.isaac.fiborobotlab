@@ -2,6 +2,7 @@ import numpy as np
 from env_obike import ObikeEnv
 import gym
 
+import numpy as np
 import wandb
 from wandb.integration.sb3 import WandbCallback
 
@@ -28,11 +29,11 @@ env = ObikeEnv(skip_frame=1,
                rendering_dt=1.0 / 60.0,
                max_episode_length=60,
                headless=False,)
-model = RecurrentPPO("MlpLstmPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}")
+model = RecurrentPPO("MlpLstmPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", device="cpu")
 model.learn(
     total_timesteps=config["total_timesteps"],
     callback=WandbCallback(
-        gradient_save_freq=100,
+        gradient_save_freq=1000,
         model_save_path=f"models/{run.id}",
         verbose=2,
     ),
@@ -53,11 +54,12 @@ num_envs = 1
 # Episode start signals are used to reset the lstm states
 episode_starts = np.ones((num_envs,), dtype=bool)
 while True:
-    obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
-    action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
+    # obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
+    # obs = np.array(obs, dtype=np.float32)
+    action, lstm_states = model.predict(observations, state=lstm_states, episode_start=episode_starts, deterministic=True)
     observations, rewards, dones, info = env.step(action)
     episode_starts = dones
     env.render()
     if dones:
         lstm_states = None  # Clear internal states
-        env.reset()
+        observations = env.reset()
