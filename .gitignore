@@ -2,4 +2,5 @@
 .idea/*
 omni/isaac/fiborobotlab/mooncake/examples/wandb/*
 omni/isaac/fiborobotlab/obike/.idea/*
+omni/isaac/fiborobotlab/obike/wandb/*
 omni/isaac/fiborobotlab/mooncake/.idea/*
