@@ -35,6 +35,7 @@ class ObikeEnv(gym.Env):
             display_every_iter=20,
             seed=0,
             headless=True,
+            observation_list=["lin_acc_y", "lin_acc_z", "ang_vel_x"],
     ) -> None:
         from omni.isaac.kit import SimulationApp
         ## Specify simulation parameters ##
@@ -43,11 +44,13 @@ class ObikeEnv(gym.Env):
         self._max_episode_length = max_episode_length / self._physics_dt  # 60 second after reset
         self._skip_frame = skip_frame
         self._iteration_count = 0
-        self._display_every_iter = 1
+        self._display_every_iter = display_every_iter
         self._update_every = 1
         self._explore_every = 5
         self._headless = headless
+        self._observation_list = observation_list
         self.simulation_app = SimulationApp({"headless": self._headless, "anti_aliasing": 0})
+
 
         ## Setup World ##
         from omni.isaac.core import World
@@ -59,7 +62,7 @@ class ObikeEnv(gym.Env):
             Obike(
                 prim_path="/obike",
                 name="obike_mk0",
-                position=np.array([0, 0.0, 2]),
+                position=np.array([0, 0.0, 1.46]),
                 orientation=np.array([1.0, 0.0, 0.0, 0.0]),
             )
         )
@@ -72,25 +75,41 @@ class ObikeEnv(gym.Env):
         self._sensor_handle = self.imu_interface.add_sensor_on_body("/obike/chassic", self.props)
 
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-1000, high=1000, shape=(3,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(len(self._observation_list),), dtype=np.float32)
     def step(self, action):
         ## EXECUTE ACTION ##
         from omni.isaac.core.utils.types import ArticulationAction
-        action = (action-0.5)+random.random()*0.01
-        self.robot.apply_wheel_actions(ArticulationAction(joint_efforts=[action * 100 * 0.607, 0, 0]))
-        self.world.step(render=not self._headless)
+        # print(action)
+        # action = (action-0.5)+random.random()*0.01
+        joint_actions = ArticulationAction()
+        joint_actions.joint_efforts = np.zeros(self.robot.num_dof)
+        joint_actions.joint_velocities = np.zeros(self.robot.num_dof)
+        joint_actions.joint_positions = np.zeros(self.robot.num_dof)
+        joint_actions.joint_efforts[self.robot._wheel_dof_indices[0]] = action * 1000 * 0.607
+        joint_actions.joint_velocities[self.robot._wheel_dof_indices[1]] = -0.2* 1000
+        joint_actions.joint_positions[self.robot._wheel_dof_indices[2]] = 0
+        self.robot.apply_action(control_actions=joint_actions)
+        # self.robot.apply_wheel_actions(ArticulationAction(joint_efforts=[action * 1000 * 0.607, -0.2* 1000, 0]))
+        self.world.step(render=(not self._headless) and (self._iteration_count%self._display_every_iter==0))
         observations = self.get_observation()
-        reward = 1
+        reward = 1 - observations['fall_rotation']*5
         ## Check for stop event ##
         exceed_time_limit = self.world.current_time_step_index >= self._max_episode_length
         robot_fall = True if observations['fall_rotation'] > 25 / 180 * math.pi else False
         done = exceed_time_limit or robot_fall
         info = {}
 
-        obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
+        obs = [observations[name] for name in self._observation_list]
+        scaled_observation = []
+        for name in self._observation_list:
+            if "lin_acc" in name: scaled_observation.append(observations[name]/1000)    # (-1000,1000)cm/s^2    -> (-1,1)
+            if "ang_vel" in name: scaled_observation.append(observations[name]/10)      # (-10,10)rad/s         -> (-1,1)
+            if "rotation" in name: scaled_observation.append(observations[name])        # quaternion already inrange(0,1)
         return obs, reward, done, info
     def reset(self):
+        self._iteration_count += 1
         self.world.reset()
+        self.robot.initialize()
         # self.world.scene.remove("/obike")
         # from obike import Obike
         # self.robot = self.world.scene.add(
@@ -102,7 +121,7 @@ class ObikeEnv(gym.Env):
         #     )
         # )
         observations = self.get_observation()
-        obs = [observations["lin_acc_y"], observations["lin_acc_z"], observations["ang_vel_x"]]
+        obs = [observations[name] for name in self._observation_list]
         return obs
     def get_observation(self):
         observations = {"robot_position_x":None, "robot_position_y":None, "robot_position_z":None, "robot_rotation_x":None, "robot_rotation_y":None, "robot_rotation_z":None, "robot_rotation_w":None, "lin_acc_x":None, "lin_acc_y":None, "lin_acc_z":None, "ang_vel_x":None, "ang_vel_y":None, "ang_vel_z":None}
