@@ -12,12 +12,12 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 config = {
     "policy_type": "MlpLstmPolicy",
-    "total_timesteps": 300000,
-    "env_name": "CartPole-v1",
+    "total_timesteps": 3000000,
+    "env_name": "MoonCake-v3",
 }
 
 run = wandb.init(
-    project="obike_test",
+    project="mooncake_test",
     config=config,
     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
     # monitor_gym=True,  # auto-upload the videos of agents playing the game

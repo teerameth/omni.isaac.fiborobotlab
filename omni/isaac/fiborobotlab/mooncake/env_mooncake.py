@@ -51,6 +51,7 @@ class MoonCakeEnv(gym.Env):
         self._observation_list = observation_list
         self.simulation_app = SimulationApp({"headless": self._headless, "anti_aliasing": 0})
 
+        self.previous_observations = {}
 
         ## Setup World ##
         from omni.isaac.core import World
@@ -104,7 +105,9 @@ class MoonCakeEnv(gym.Env):
         self.robot.apply_wheel_actions(ArticulationAction(joint_efforts=[action[i] * 3000 for i in range(3)]))
         self.world.step(render=(not self._headless) and (self._iteration_count%self._display_every_iter==0))
         observations = self.get_observation()
-        reward = 1 - observations['fall_rotation']*5
+        
+        reward = self.previous_observations['fall_rotation'] - observations['fall_rotation']
+        reward *= 100
         ## Check for stop event ##
         exceed_time_limit = self.world.current_time_step_index >= self._max_episode_length
         robot_fall = True if observations['fall_rotation'] > 50 / 180 * math.pi else False
@@ -117,6 +120,7 @@ class MoonCakeEnv(gym.Env):
             if "lin_acc" in name: scaled_observation.append(observations[name]/1000)    # (-1000,1000)cm/s^2    -> (-1,1)
             if "ang_vel" in name: scaled_observation.append(observations[name]/10)      # (-10,10)rad/s         -> (-1,1)
             if "rotation" in name: scaled_observation.append(observations[name])        # quaternion already inrange(0,1)
+        self.previous_observations = observations.copy()
         return obs, reward, done, info
     def reset(self):
         self._iteration_count += 1
@@ -134,6 +138,7 @@ class MoonCakeEnv(gym.Env):
         # )
         observations = self.get_observation()
         obs = [observations[name] for name in self._observation_list]
+        self.previous_observations['fall_rotation'] = 0
         return obs
     def get_observation(self):
         observations = {"robot_position_x":None, "robot_position_y":None, "robot_position_z":None, "robot_rotation_x":None, "robot_rotation_y":None, "robot_rotation_z":None, "robot_rotation_w":None, "lin_acc_x":None, "lin_acc_y":None, "lin_acc_z":None, "ang_vel_x":None, "ang_vel_y":None, "ang_vel_z":None}
