@@ -12,7 +12,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 config = {
     "policy_type": "MlpLstmPolicy",
-    "total_timesteps": 100000,
+    "total_timesteps": 300000,
     "env_name": "CartPole-v1",
 }
 
@@ -26,11 +26,12 @@ run = wandb.init(
 
 
 env = MoonCakeEnv(skip_frame=1,
-               physics_dt=1.0 / 100.0,
-               rendering_dt=1.0 / 60.0,
-               max_episode_length=10,
-               display_every_iter=20,
-               headless=False,)
+                  physics_dt=1.0 / 100.0,
+                  rendering_dt=1.0 / 60.0,
+                  max_episode_length=10,
+                  display_every_iter=20,
+                  headless=False,
+                  observation_list=["lin_acc_x", "lin_acc_y", "lin_acc_z", "ang_vel_x", "ang_vel_y", "ang_vel_z", "robot_rotation_x", "robot_rotation_y", "robot_rotation_z"])
 model = RecurrentPPO("MlpLstmPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", device="cuda")
 model.learn(
     total_timesteps=config["total_timesteps"],

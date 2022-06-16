@@ -2,5 +2,12 @@
 .idea/*
 omni/isaac/fiborobotlab/mooncake/examples/wandb/*
 omni/isaac/fiborobotlab/obike/.idea/*
+omni/isaac/fiborobotlab/obike/runs/*
+omni/isaac/fiborobotlab/obike/models/*
+omni/isaac/fiborobotlab/obike/mlp_policy/*
 omni/isaac/fiborobotlab/obike/wandb/*
 omni/isaac/fiborobotlab/mooncake/.idea/*
+omni/isaac/fiborobotlab/mooncake/runs/*
+omni/isaac/fiborobotlab/mooncake/models/*
+omni/isaac/fiborobotlab/mooncake/mlp_policy/*
+omni/isaac/fiborobotlab/mooncake/wandb/*
