@@ -27,7 +27,7 @@ device_id: 0
 rl_device: 'cuda:0'
 
 ## PhysX arguments
-num_threads: 8 # Number of worker threads per scene used by PhysX - for CPU PhysX only.
+num_threads: 4 # Number of worker threads per scene used by PhysX - for CPU PhysX only.
 solver_type: 1 # 0: pgs, 1: tgs
 
 # RLGames Arguments
@@ -37,11 +37,11 @@ test: False
 checkpoint: ''
 
 # disables rendering
-headless: True
+headless: False
 
 # set default task and default training config based on task
 defaults:
-  - task: Cartpole
+  - task: Obike
   - train: ${task}PPO
   - hydra/job_logging: disabled
 

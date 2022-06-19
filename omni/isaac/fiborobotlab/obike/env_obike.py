@@ -54,7 +54,7 @@ class ObikeEnv(gym.Env):
 
         ## Setup World ##
         from omni.isaac.core import World
-        from obike import Obike
+        from obike_old import Obike
         # from omni.isaac.core.objects import DynamicSphere
         self.world = World(physics_dt=self._physics_dt, rendering_dt=self._rendering_dt, stage_units_in_meters=0.01)
         self.world.scene.add_default_ground_plane()

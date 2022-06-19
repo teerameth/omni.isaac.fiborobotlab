@@ -30,7 +30,7 @@ class CartpoleTask(RLTask):
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
         self._max_episode_length = 500
 
-        self._num_observations = 4
+        self._num_observations = 2
         self._num_actions = 1
 
         RLTask.__init__(self, name, env)
@@ -57,14 +57,17 @@ class CartpoleTask(RLTask):
         pole_pos = dof_pos[:, self._pole_dof_idx]
         pole_vel = dof_vel[:, self._pole_dof_idx]
 
+        # self.obs_buf[:, 0] = cart_pos
+        # self.obs_buf[:, 1] = cart_vel
+        # self.obs_buf[:, 2] = pole_pos
+        # self.obs_buf[:, 3] = pole_vel
+
         self.obs_buf[:, 0] = cart_pos
-        self.obs_buf[:, 1] = cart_vel
-        self.obs_buf[:, 2] = pole_pos
-        self.obs_buf[:, 3] = pole_vel
+        self.obs_buf[:, 1] = pole_pos
 
         observations = {
             self._cartpoles.name: {
-                "obs_buf": self.obs_buf[:, 2]
+                "obs_buf": self.obs_buf
             }
         }
         return observations
@@ -112,10 +115,13 @@ class CartpoleTask(RLTask):
         self.reset_idx(indices)
 
     def calculate_metrics(self) -> None:
-        cart_pos = self.obs_buf[:, 0]
-        cart_vel = self.obs_buf[:, 1]
-        pole_angle = self.obs_buf[:, 2]
-        pole_vel = self.obs_buf[:, 3]
+        dof_pos = self._cartpoles.get_joint_positions(clone=False)
+        dof_vel = self._cartpoles.get_joint_velocities(clone=False)
+
+        cart_pos = dof_pos[:, self._cart_dof_idx]
+        cart_vel = dof_vel[:, self._cart_dof_idx]
+        pole_angle = dof_pos[:, self._pole_dof_idx]
+        pole_vel = dof_vel[:, self._pole_dof_idx]
 
         reward = 1.0 - pole_angle * pole_angle - 0.01 * torch.abs(cart_vel) - 0.005 * torch.abs(pole_vel)
         reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
@@ -124,8 +130,10 @@ class CartpoleTask(RLTask):
         self.rew_buf[:] = reward
 
     def is_done(self) -> None:
-        cart_pos = self.obs_buf[:, 0]
-        pole_pos = self.obs_buf[:, 2]
+        dof_pos = self._cartpoles.get_joint_positions(clone=False)
+
+        cart_pos = dof_pos[:, self._cart_dof_idx]
+        pole_pos = dof_pos[:, self._pole_dof_idx]
 
         resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
         resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
