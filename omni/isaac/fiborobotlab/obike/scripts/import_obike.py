@@ -6,7 +6,6 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-from torch import roll
 import omni
 import omni.kit.commands
 import asyncio
@@ -14,6 +13,7 @@ import math
 import weakref
 import omni.ui as ui
 from omni.kit.menu.utils import add_menu_items, remove_menu_items, MenuItemDescription
+from omni.isaac.isaac_sensor import _isaac_sensor
 
 from .common import set_drive_parameters
 from pxr import UsdLux, Sdf, Gf, UsdPhysics
@@ -119,7 +119,7 @@ class Extension(omni.ext.IExt):
                 import_config=import_config,
             )
 
-            viewport = omni.kit.viewport.get_default_viewport_window()
+            viewport = omni.kit.viewport_legacy.get_default_viewport_window()
             viewport.set_camera_position("/OmniverseKit_Persp", -51, 63, 25, True)
             viewport.set_camera_target("/OmniverseKit_Persp", 220, -218, -160, True)
             stage = omni.usd.get_context().get_stage()
@@ -155,6 +155,18 @@ class Extension(omni.ext.IExt):
             prim=prim,
             api_prefix="drive",
             multiple_api_token="angular",
+        )
+        ## Attact IMU sensor ##
+        self._is = _isaac_sensor.acquire_imu_sensor_interface()
+        self.body_path = "/obike/chassic"
+        result, sensor = omni.kit.commands.execute(
+            "IsaacSensorCreateImuSensor",
+            path="/sensor",
+            parent=self.body_path,
+            sensor_period=1 / 500.0,
+            offset=Gf.Vec3d(0, 0, 10),
+            orientation=Gf.Quatd(1, 0, 0, 0),
+            visualize=True,
         )
 
     def _on_config_drives(self):

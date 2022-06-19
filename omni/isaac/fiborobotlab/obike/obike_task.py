@@ -1,3 +1,5 @@
+import time
+
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from obike import Obike
 
@@ -36,13 +38,16 @@ class ObikeTask(RLTask):
         self._num_observations = 4
         self._num_actions = 1
 
-        self._imu_buf = {"lin_acc_x":0.0, "lin_acc_y":0.0, "lin_acc_z":0.0, "ang_vel_x":0.0, "ang_vel_y":0.0, "ang_vel_z":0.0}  # default initial sensor buffer
+        self._imu_buf = [{"lin_acc_x":0.0, "lin_acc_y":0.0, "lin_acc_z":0.0, "ang_vel_x":0.0, "ang_vel_y":0.0, "ang_vel_z":0.0}]*128  # default initial sensor buffer
         RLTask.__init__(self, name, env)
+
+        self._is = _isaac_sensor.acquire_imu_sensor_interface()     # Sensor reader
         return
 
     def set_up_scene(self, scene) -> None:
         self.get_robot()
         super().set_up_scene(scene)
+        print(get_all_matching_child_prims("/"))
         self._robots = ArticulationView(prim_paths_expr="/World/envs/.*/Obike", name="obike_view")
         scene.add(self._robots)
         self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
@@ -52,20 +57,6 @@ class ObikeTask(RLTask):
         robot = Obike(prim_path=self.default_zero_env_path + "/Obike", name="Obike", translation=self._robot_positions)
         # applies articulation settings from the task configuration yaml file
         self._sim_config.apply_articulation_settings("Obike", get_prim_at_path(robot.prim_path), self._sim_config.parse_actor_config("Obike"))
-        ## Attact IMU sensor ##
-        self._is = _isaac_sensor.acquire_imu_sensor_interface()
-        self.body_path = "/World/envs/env_0/Obike/chassic"
-        print("AAAAAAAAAAAAAAA")
-        print(get_all_matching_child_prims(prim_path="/"))
-        result, sensor = omni.kit.commands.execute(
-            "IsaacSensorCreateImuSensor",
-            path="/sensor",
-            parent=self.body_path,
-            sensor_period=1 / 500.0,
-            offset=Gf.Vec3d(0, 0, 10),
-            orientation=Gf.Quatd(1, 0, 0, 0),
-            visualize=True,
-        )
 
     def get_observations(self) -> dict:
         # dof_pos = self._robots.get_joint_positions(clone=False)
@@ -103,8 +94,14 @@ class ObikeTask(RLTask):
         self._robots.set_joint_efforts(forces, indices=indices)
 
         ## Read IMU & store in buffer ##
-        reading = self._is.get_sensor_readings(self.body_path + "/sensor")
-        if reading.shape[0]: self._imu_buf = reading[-1] # get only lastest reading
+        buffer = []
+        robots_prim_path = self._robots.prim_paths
+        for robot_prim_path in robots_prim_path:
+            reading = self._is.get_sensor_readings(robot_prim_path + "/sensor")
+            if reading.shape[0]:
+                buffer.append(reading[-1])  # get only lastest reading
+            else: buffer.append({"lin_acc_x":0.0, "lin_acc_y":0.0, "lin_acc_z":0.0, "ang_vel_x":0.0, "ang_vel_y":0.0, "ang_vel_z":0.0})  # default initial sensor buffer
+        self._imu_buf = buffer
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
 
