@@ -37,7 +37,7 @@ test: False
 checkpoint: ''
 
 # disables rendering
-headless: True
+headless: False
 
 # set default task and default training config based on task
 defaults:
