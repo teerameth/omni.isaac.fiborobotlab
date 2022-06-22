@@ -14,6 +14,7 @@ import math
 import weakref
 import omni.ui as ui
 from omni.kit.menu.utils import add_menu_items, remove_menu_items, MenuItemDescription
+from omni.isaac.isaac_sensor import _isaac_sensor
 
 from .common import set_drive_parameters
 from pxr import UsdLux, Sdf, Gf, UsdPhysics
@@ -165,6 +166,18 @@ class Extension(omni.ext.IExt):
                         api_prefix="drive",
                         multiple_api_token="angular",
                     )
+        ## Attact IMU sensor ##
+        self._is = _isaac_sensor.acquire_imu_sensor_interface()
+        self.body_path = "/mooncake/base_plate"
+        result, sensor = omni.kit.commands.execute(
+            "IsaacSensorCreateImuSensor",
+            path="/sensor",
+            parent=self.body_path,
+            sensor_period=1 / 500.0,            # 2ms
+            offset=Gf.Vec3d(0, 0, 17.15),       # translate to surface of /mooncake/top_plate
+            orientation=Gf.Quatd(1, 0, 0, 0),   # (x, y, z, w)
+            visualize=True,
+        )
 
     def _on_config_drives(self):
         # self._on_config_robot()  # make sure drives are configured first

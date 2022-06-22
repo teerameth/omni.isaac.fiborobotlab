@@ -49,7 +49,7 @@ class MoonCakeEnv(gym.Env):
         self._iteration_count = 0
         self._display_every_iter = display_every_iter
         from omni.isaac.core import World
-        from mooncake import MoonCake
+        from mooncake_old import MoonCake
         from omni.isaac.core.objects import DynamicSphere
         # import omni.physx as _physx
         self._my_world = World(physics_dt=physics_dt, rendering_dt=rendering_dt, stage_units_in_meters=0.01)
