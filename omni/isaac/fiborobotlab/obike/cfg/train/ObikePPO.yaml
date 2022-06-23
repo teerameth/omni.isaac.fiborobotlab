@@ -32,7 +32,7 @@ params:
     rnn:
       name: 'lstm'
       units: 32
-      layers: 1
+      layers: 2
       before_mlp: False
       concat_input: True
       layer_norm: True

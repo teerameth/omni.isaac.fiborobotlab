@@ -43,7 +43,7 @@ class MooncakeTask(RLTask):
 
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
-        self._robot_positions = torch.tensor([0.0, 0.0, 0.0167])
+        self._robot_positions = torch.tensor([0.0, 0.0, 0.30])
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -64,20 +64,18 @@ class MooncakeTask(RLTask):
         print(get_all_matching_child_prims("/"))
         self._robots = ArticulationView(prim_paths_expr="/World/envs/*/Mooncake/mooncake", name="mooncake_view")
         scene.add(self._robots)
-        self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
+        # self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
         return
 
     def get_mooncake(self):    # must be called at very first line of set_up_scene()
         mooncake = Mooncake(prim_path=self.default_zero_env_path + "/Mooncake", name="Mooncake", translation=self._robot_positions)
         # applies articulation settings from the task configuration yaml file
         self._sim_config.apply_articulation_settings("Mooncake", get_prim_at_path(mooncake.prim_path), self._sim_config.parse_actor_config("Mooncake"))
-
     def get_robot(self):
         return self._robots
 
 
     def get_observations(self) -> dict:
-        print("get_observations")
         # dof_pos = self._robots.get_joint_positions(clone=False)
         dof_vel = self._robots.get_joint_velocities(clone=False)
 
@@ -112,7 +110,6 @@ class MooncakeTask(RLTask):
         return observations
 
     def pre_physics_step(self, actions) -> None:
-        print("AAAAAAAAAAAAAAAAAAAAAAAAA")
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids)
@@ -138,7 +135,6 @@ class MooncakeTask(RLTask):
             else: buffer.append({"lin_acc_x":0.0, "lin_acc_y":0.0, "lin_acc_z":0.0, "ang_vel_x":0.0, "ang_vel_y":0.0, "ang_vel_z":0.0})  # default initial sensor buffer
         self._imu_buf = buffer
     def reset_idx(self, env_ids):
-        print("reset_idx")
         num_resets = len(env_ids)
 
         # randomize DOF velocities
