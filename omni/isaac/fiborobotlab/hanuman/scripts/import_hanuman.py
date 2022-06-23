@@ -6,7 +6,6 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-from torch import roll
 import omni
 import omni.kit.commands
 import asyncio
@@ -14,19 +13,14 @@ import math
 import weakref
 import omni.ui as ui
 from omni.kit.menu.utils import add_menu_items, remove_menu_items, MenuItemDescription
+from omni.isaac.isaac_sensor import _isaac_sensor
 
 from .common import set_drive_parameters
 from pxr import UsdLux, Sdf, Gf, UsdPhysics
 
 from omni.isaac.ui.ui_utils import setup_ui_headers, get_style, btn_builder
 
-EXTENSION_NAME = "Import Mooncake"
-
-def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):
-    omega_0 = (v_x-d*w_z)/r
-    omega_1 = -(v_x-math.sqrt(3)*v_y+2*d*w_z)/(2*r)
-    omega_2 = -(v_x+math.sqrt(3)*v_y+2*d*w_z)/(2*r)
-    return [omega_0, omega_1, omega_2]
+EXTENSION_NAME = "Import Hanuman"
 
 class Extension(omni.ext.IExt):
     def on_startup(self, ext_id: str):
@@ -53,10 +47,10 @@ class Extension(omni.ext.IExt):
         with self._window.frame:
             with ui.VStack(spacing=5, height=0):
 
-                title = "Import a Hanuman Robot via URDF"
+                title = "Import a Hanuman humanoid Robot via URDF"
                 doc_link = "https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/ext_omni_isaac_urdf.html"
 
-                overview = "This Example shows you import an NVIDIA Hanuman robot via URDF.\n\nPress the 'Open in IDE' button to view the source code."
+                overview = "This Example shows you import an NVIDIA hanuman robot via URDF.\n\nPress the 'Open in IDE' button to view the source code."
 
                 setup_ui_headers(self._ext_id, __file__, title, doc_link, overview)
 
@@ -75,7 +69,7 @@ class Extension(omni.ext.IExt):
                             "label": "Load Robot",
                             "type": "button",
                             "text": "Load",
-                            "tooltip": "Load a UR10 Robot into the Scene",
+                            "tooltip": "Load a O-Bike Robot into the Scene",
                             "on_clicked_fn": self._on_load_robot,
                         }
                         btn_builder(**dict)
@@ -107,25 +101,25 @@ class Extension(omni.ext.IExt):
 
     def _on_load_robot(self):
         load_stage = asyncio.ensure_future(omni.usd.get_context().new_stage_async())
-        asyncio.ensure_future(self._load_mooncake(load_stage))
+        asyncio.ensure_future(self._load_obike(load_stage))
 
-    async def _load_mooncake(self, task):
+    async def _load_obike(self, task):
         done, pending = await asyncio.wait({task})
         if task in done:
             status, import_config = omni.kit.commands.execute("URDFCreateImportConfig")
             import_config.merge_fixed_joints = True
             import_config.import_inertia_tensor = False
             # import_config.distance_scale = 100
-            import_config.fix_base = False
+            import_config.fix_base = False       # Attact wheel to /groundPlane
             import_config.make_default_prim = True
             import_config.create_physics_scene = True
             omni.kit.commands.execute(
                 "URDFParseAndImportFile",
-                urdf_path=self._extension_path + "/data/urdf/robots/hanuman/urdf/full_assemandframe01.SLDASM.urdf",
+                urdf_path=self._extension_path + "/data/urdf/robots/hanumanURDFv1/urdf/hanumanURDFv1.urdf",
                 import_config=import_config,
             )
 
-            viewport = omni.kit.viewport.get_default_viewport_window()
+            viewport = omni.kit.viewport_legacy.get_default_viewport_window()
             viewport.set_camera_position("/OmniverseKit_Persp", -51, 63, 25, True)
             viewport.set_camera_target("/OmniverseKit_Persp", 220, -218, -160, True)
             stage = omni.usd.get_context().get_stage()
@@ -139,7 +133,7 @@ class Extension(omni.ext.IExt):
                 planePath="/groundPlane",
                 axis="Z",
                 size=1500.0,
-                position=Gf.Vec3f(0, 0, -25),
+                position=Gf.Vec3f(0, 0, 0),
                 color=Gf.Vec3f(0.5),
             )
             # make sure the ground plane is under root prim and not robot
@@ -151,31 +145,29 @@ class Extension(omni.ext.IExt):
             distantLight.CreateIntensityAttr(500)
 
     def _on_config_robot(self):
-        stage = omni.usd.get_context().get_stage()
-        # Make all rollers spin freely by removing extra drive API
-        for wheel_index in range(3):
-            for plate_index in range(2):
-                for roller_index in range(9):
-                    prim_path = "/mooncake/wheel_{}/roller_{}_{}_{}_joint".format(wheel_index, wheel_index, plate_index, roller_index)
-                    prim = stage.GetPrimAtPath(prim_path)
-                    omni.kit.commands.execute(
-                        "UnapplyAPISchemaCommand",
-                        api=UsdPhysics.DriveAPI,
-                        prim=prim,
-                        api_prefix="drive",
-                        multiple_api_token="angular",
-                    )
+        ## Attact IMU sensor ##
+        self._is = _isaac_sensor.acquire_imu_sensor_interface()
+        self.body_path = "/full_assemandframe01.SLDASM/body"
+        result, sensor = omni.kit.commands.execute(
+            "IsaacSensorCreateImuSensor",
+            path="/sensor",
+            parent=self.body_path,
+            sensor_period=1 / 500.0,
+            offset=Gf.Vec3d(0, 0, 5),
+            orientation=Gf.Quatd(1, 0, 0, 0),
+            visualize=True,
+        )
 
     def _on_config_drives(self):
         # self._on_config_robot()  # make sure drives are configured first
         stage = omni.usd.get_context().get_stage()
         # set each axis to spin at a rate of 1 rad/s
-        axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_0_joint"), "angular")
-        axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_1_joint"), "angular")
-        axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/mooncake/base_plate/wheel_2_joint"), "angular")
+        axle_steering = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/front_wheel_arm_joint"), "angular")
+        axle_rear_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/rear_wheel_joint"), "angular")
+        axle_reaction_wheel = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/obike/chassic/reaction_wheel_joint"), "angular")
 
-        omega = velocity2omega(0, 0.1, 0)
-        print(omega)
-        set_drive_parameters(axle_0, "velocity", math.degrees(omega[0]), 0, math.radians(1e7))
-        set_drive_parameters(axle_1, "velocity", math.degrees(omega[1]), 0, math.radians(1e7))
-        set_drive_parameters(axle_2, "velocity", math.degrees(omega[2]), 0, math.radians(1e7))
+        # omega = velocity2omega(0, 0.1, 0)
+        # print(omega)
+        set_drive_parameters(axle_steering, "position", math.degrees(3), 0, math.radians(1e7))
+        set_drive_parameters(axle_rear_wheel, "velocity", math.degrees(-10), 0, math.radians(1e7))
+        set_drive_parameters(axle_reaction_wheel, "velocity", math.degrees(4), 0, math.radians(1e7))
