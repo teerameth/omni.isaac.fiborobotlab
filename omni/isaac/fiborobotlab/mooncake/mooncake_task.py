@@ -1,7 +1,7 @@
 import time
 
 from omniisaacgymenvs.tasks.base.rl_task import RLTask
-from mooncake import Mooncake
+from mooncake import Mooncake, Ball
 
 import omni
 from pxr import Gf, UsdGeom
@@ -44,6 +44,7 @@ class MooncakeTask(RLTask):
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._robot_positions = torch.tensor([0.0, 0.0, 0.30])
+        self._ball_positions = torch.tensor([0.0, 0.0, 0.12])   # ball diameter is 12 cm.
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -60,17 +61,21 @@ class MooncakeTask(RLTask):
 
     def set_up_scene(self, scene) -> None:
         self.get_mooncake()    # mush be called before "super().set_up_scene(scene)"
+        self.get_ball()
         super().set_up_scene(scene)
         print(get_all_matching_child_prims("/"))
         self._robots = ArticulationView(prim_paths_expr="/World/envs/*/Mooncake/mooncake", name="mooncake_view")
         scene.add(self._robots)
         # self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
+
         return
 
     def get_mooncake(self):    # must be called at very first line of set_up_scene()
         mooncake = Mooncake(prim_path=self.default_zero_env_path + "/Mooncake", name="Mooncake", translation=self._robot_positions)
         # applies articulation settings from the task configuration yaml file
         self._sim_config.apply_articulation_settings("Mooncake", get_prim_at_path(mooncake.prim_path), self._sim_config.parse_actor_config("Mooncake"))
+    def get_ball(self):
+        ball = Ball(prim_path=self.default_zero_env_path + "/Ball", name="Ball", translation=self._ball_positions)
     def get_robot(self):
         return self._robots
 
@@ -138,10 +143,8 @@ class MooncakeTask(RLTask):
         num_resets = len(env_ids)
 
         # randomize DOF velocities
-        dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, 1), device=self._device)
-
-        # apply resets
-        self._robots.set_joint_velocities(dof_vel, indices=env_ids)
+        dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, 57), device=self._device)
+        self._robots.set_joint_velocities(dof_vel, indices=env_ids)     # apply resets
 
         root_pos, root_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
         root_vel = torch.zeros((num_resets, 6), device=self._device)
@@ -156,16 +159,17 @@ class MooncakeTask(RLTask):
 
     def post_reset(self):   # Run only once after simulation started
         # self._robots = self.get_robot()
+
         self.initial_root_pos, self.initial_root_rot = self._robots.get_world_poses()   # save initial position for reset
         self.initial_dof_pos = self._robots.get_joint_positions()
         # initialize some data used later on
-        self.start_rotation = torch.tensor([1, 0, 0, 0], device=self._device, dtype=torch.float32)
-        self.up_vec = torch.tensor([0, 0, 1], dtype=torch.float32, device=self._device).repeat((self.num_envs, 1))
-        self.heading_vec = torch.tensor([1, 0, 0], dtype=torch.float32, device=self._device).repeat((self.num_envs, 1))
-        self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
+        # self.start_rotation = torch.tensor([1, 0, 0, 0], device=self._device, dtype=torch.float32)
+        # self.up_vec = torch.tensor([0, 0, 1], dtype=torch.float32, device=self._device).repeat((self.num_envs, 1))
+        # self.heading_vec = torch.tensor([1, 0, 0], dtype=torch.float32, device=self._device).repeat((self.num_envs, 1))
+        # self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
 
-        self.basis_vec0 = self.heading_vec.clone()
-        self.basis_vec1 = self.up_vec.clone()
+        # self.basis_vec0 = self.heading_vec.clone()
+        # self.basis_vec1 = self.up_vec.clone()
 
         self._wheel_0_dof_idx = self._robots.get_dof_index("wheel_0_joint")
         self._wheel_1_dof_idx = self._robots.get_dof_index("wheel_1_joint")
