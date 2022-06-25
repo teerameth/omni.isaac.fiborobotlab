@@ -8,7 +8,8 @@ from pxr import UsdPhysics, Gf, UsdGeom
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path, get_all_matching_child_prims
-from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate, quat_from_angle_axis
+import omni.isaac.core.utils.torch.rotations as torch_rot
+# from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate, quat_from_angle_axis, quat_rotate
 from omni.isaac.core.utils.torch.maths import torch_rand_float, tensor_clamp, unscale
 from omni.isaac.isaac_sensor import _isaac_sensor
 
@@ -49,6 +50,7 @@ class MooncakeTask(RLTask):
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
+        self._max_wheel_velocity = self._task_cfg["env"]["maxWheelVelocity"]
         self._max_episode_length = 500
 
         self._num_observations = 9
@@ -79,12 +81,16 @@ class MooncakeTask(RLTask):
             cubeGeom.AddTranslateOp().Set(offset)
             # Attach Rigid Body and Collision Preset
             rigid_api = UsdPhysics.RigidBodyAPI.Apply(cubePrim)
+            mass_api = UsdPhysics.MassAPI.Apply(cubePrim)
+            mass_api.CreateMassAttr(4)
             rigid_api.CreateRigidBodyEnabledAttr(True)
+
             UsdPhysics.CollisionAPI.Apply(cubePrim)
+
         print(get_all_matching_child_prims("/"))
         self._ball = RigidPrimView(prim_paths_expr="/World/envs/*/ball", name="ball_view")
         scene.add(self._robots)
-        # scene.add(self._ball)
+        scene.add(self._ball)
         # self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
 
         return
@@ -141,13 +147,14 @@ class MooncakeTask(RLTask):
         actions = actions.to(self._device)
         actions = 2*(actions - 0.5)
 
-        forces = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
-        forces[:, self._wheel_0_dof_idx] = self._max_push_effort * actions[:, 0]
-        forces[:, self._wheel_1_dof_idx] = self._max_push_effort * actions[:, 1]
-        forces[:, self._wheel_2_dof_idx] = self._max_push_effort * actions[:, 2]
+        velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
+        velocities[:, self._wheel_0_dof_idx] = self._max_wheel_velocity * actions[:, 0]
+        velocities[:, self._wheel_1_dof_idx] = self._max_wheel_velocity * actions[:, 1]
+        velocities[:, self._wheel_2_dof_idx] = self._max_wheel_velocity * actions[:, 2]
 
         indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
-        self._robots.set_joint_efforts(forces, indices=indices) # apply joints torque
+        self._robots.set_joint_velocities(velocities=velocities, indices=indices) # apply joints velocity (rad/s)
+        # self._robots.set_joint_efforts(forces, indices=indices) # apply joints torque
 
         ## Read IMU & store in buffer ##
         buffer = []
@@ -161,35 +168,44 @@ class MooncakeTask(RLTask):
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
 
-        # randomize DOF velocities
-        dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, 57), device=self._device)
-        self._robots.set_joint_velocities(dof_vel, indices=env_ids)     # apply resets
+        ## randomize DOF velocities ##
+        # dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, 57), device=self._device)
+        # self._robots.set_joint_velocities(dof_vel, indices=env_ids)     # apply resets
 
-        # Reset Ball positions
-        root_pos, root_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
-        root_pos[:, 2] = 0.12   # force ball to touch floor prefectly
-        # root_vel = torch.zeros((num_resets, 6), device=self._device)
-        self._ball.set_world_poses(root_pos, root_rot, indices=env_ids)
+        ## Reset Ball positions ##
+        ball_pos, ball_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
+        ball_pos[:, 2] = 0.12   # force ball to touch floor prefectly
+        root_vel = torch.zeros((num_resets, 6), device=self._device)
+        # Apply Ball position
+        self._ball.set_world_poses(ball_pos, ball_rot, indices=env_ids)
 
-        # random Ball velocities
-        ball_vel = torch_rand_float(-0.1, 0.1, (num_resets, 6), device=self._device)
-        # self._ball.set_velocities(ball_vel, indices=env_ids)
+        ## Random Ball velocities ##
+        ball_vel = torch_rand_float(-0.01, 0.01, (num_resets, 6), device=self._device)
+        self._ball.set_velocities(ball_vel, indices=env_ids)
 
-        # random Robot positions & orientations
-        fall_direction = torch_rand_float(-np.pi, np.pi, (num_resets, 1), device=self._device)
-        fall_direction_axis = torch.Tensor([0, 0, 1]).repeat(num_resets).to(self._device)
-        fall_angle = torch_rand_float(0, np.pi/8, (num_resets, 1), device=self._device)
-        fall_angle_axis = torch.Tensor([0, 1, 0]).repeat(num_resets).to(self._device)
+        ## Random Robot positions & orientations ##
+        fall_direction = torch_rand_float(-np.pi, np.pi, (num_resets, 1), device=self._device).reshape(-1)
+        fall_direction_axis = torch.Tensor([0, 0, 1]).repeat(num_resets, 1).to(self._device).reshape(-1, 3)
+        fall_angle = torch_rand_float(0, np.pi/8, (num_resets, 1), device=self._device).reshape(-1)
+        fall_angle_axis = torch.Tensor([0, 1, 0]).repeat(num_resets, 1).to(self._device).reshape(-1, 3)
+        fall_direction_quat = torch_rot.quat_from_angle_axis(fall_direction, fall_direction_axis)
+        fall_angle_quat = torch_rot.quat_from_angle_axis(fall_angle, fall_angle_axis)
 
-        fall_direction_quat = quat_from_angle_axis(fall_direction, fall_direction_axis)
-        fall_angle_quat = quat_from_angle_axis(fall_angle, fall_angle_axis)
+        ## Apply Robot position ##
+        robot_pos = ball_pos.clone()    # use ball position as reference
+        robot_offset = torch.Tensor([0, 0, 0.19]).repeat(num_resets).to(self._device).reshape(-1, 3)  # Distance from ball center to robot center is 18 cm.
 
+        robot_pos = robot_pos + robot_offset
+        # robot_pos = robot_pos + torch_rot.quat_rotate(fall_angle_quat, torch_rot.quat_rotate(fall_direction_quat, robot_offset))
+        robot_rot = self.initial_root_rot[env_ids]
+        # robot_rot = torch_rot.quat_apply(fall_direction_quat, robot_rot)
+        # robot_rot = torch_rot.quat_apply(fall_angle_quat, robot_rot)
 
         # root_pos, root_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
         # root_vel = torch.zeros((num_resets, 6), device=self._device)
         #
-        # self._robots.set_world_poses(root_pos, root_rot, indices=env_ids)
-        # self._robots.set_velocities(root_vel, indices=env_ids)
+        self._robots.set_world_poses(robot_pos, robot_rot, indices=env_ids)
+        self._robots.set_velocities(root_vel, indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
@@ -238,14 +254,17 @@ class MooncakeTask(RLTask):
     def is_done(self) -> None:  # check termination for each env
         robots_position, robots_orientation = self._robots.get_world_poses()
         fall_angles = q2falling(robots_orientation)  # find fall angle of all robot (batched)
-
-        # cart_pos = self.obs_buf[:, 0]
-        # pole_pos = self.obs_buf[:, 2]
+        robot_z_position = robots_position[:, 2]
+        # print("Z position", robot_z_position)
 
         # resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         # resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)
 
-        resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, 0)           # reset by falling
+        resets = torch.where(robot_z_position < 0.2, 1, 0)   # reset by falling (Z-position)
+        # print(robots_position)
+        # print("RESET")
+        # print(resets)
+        # resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, 0)           # reset by falling (angle)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)  # reset by time
         self.reset_buf[:] = resets
