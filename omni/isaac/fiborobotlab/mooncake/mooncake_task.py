@@ -4,10 +4,11 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from mooncake import Mooncake, Ball
 
 import omni
-from pxr import Gf, UsdGeom
+from pxr import UsdPhysics, Gf, UsdGeom
 from omni.isaac.core.articulations import ArticulationView
+from omni.isaac.core.prims import RigidPrimView
 from omni.isaac.core.utils.prims import get_prim_at_path, get_all_matching_child_prims
-from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate
+from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate, quat_from_angle_axis
 from omni.isaac.core.utils.torch.maths import torch_rand_float, tensor_clamp, unscale
 from omni.isaac.isaac_sensor import _isaac_sensor
 
@@ -61,11 +62,29 @@ class MooncakeTask(RLTask):
 
     def set_up_scene(self, scene) -> None:
         self.get_mooncake()    # mush be called before "super().set_up_scene(scene)"
-        self.get_ball()
+        # self.get_ball()
         super().set_up_scene(scene)
         print(get_all_matching_child_prims("/"))
         self._robots = ArticulationView(prim_paths_expr="/World/envs/*/Mooncake/mooncake", name="mooncake_view")
+
+        # Add ball for each robot
+        stage = omni.usd.get_context().get_stage()
+        for robot_path in self._robots.prim_paths:
+            ball_path = robot_path[:-18] + "/ball"    # remove "/Mooncake/mooncake" and add "/ball" instead
+            cubeGeom = UsdGeom.Sphere.Define(stage, ball_path)
+            cubePrim = stage.GetPrimAtPath(ball_path)
+            size = 0.12
+            offset = Gf.Vec3f(0.0, 0.0, 0.12)
+            cubeGeom.CreateRadiusAttr(size)
+            cubeGeom.AddTranslateOp().Set(offset)
+            # Attach Rigid Body and Collision Preset
+            rigid_api = UsdPhysics.RigidBodyAPI.Apply(cubePrim)
+            rigid_api.CreateRigidBodyEnabledAttr(True)
+            UsdPhysics.CollisionAPI.Apply(cubePrim)
+        print(get_all_matching_child_prims("/"))
+        self._ball = RigidPrimView(prim_paths_expr="/World/envs/*/ball", name="ball_view")
         scene.add(self._robots)
+        # scene.add(self._ball)
         # self.meters_per_unit = UsdGeom.GetStageMetersPerUnit(omni.usd.get_context().get_stage())
 
         return
@@ -146,11 +165,31 @@ class MooncakeTask(RLTask):
         dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, 57), device=self._device)
         self._robots.set_joint_velocities(dof_vel, indices=env_ids)     # apply resets
 
+        # Reset Ball positions
         root_pos, root_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
-        root_vel = torch.zeros((num_resets, 6), device=self._device)
+        root_pos[:, 2] = 0.12   # force ball to touch floor prefectly
+        # root_vel = torch.zeros((num_resets, 6), device=self._device)
+        self._ball.set_world_poses(root_pos, root_rot, indices=env_ids)
 
-        self._robots.set_world_poses(root_pos, root_rot, indices=env_ids)
-        self._robots.set_velocities(root_vel, indices=env_ids)
+        # random Ball velocities
+        ball_vel = torch_rand_float(-0.1, 0.1, (num_resets, 6), device=self._device)
+        # self._ball.set_velocities(ball_vel, indices=env_ids)
+
+        # random Robot positions & orientations
+        fall_direction = torch_rand_float(-np.pi, np.pi, (num_resets, 1), device=self._device)
+        fall_direction_axis = torch.Tensor([0, 0, 1]).repeat(num_resets).to(self._device)
+        fall_angle = torch_rand_float(0, np.pi/8, (num_resets, 1), device=self._device)
+        fall_angle_axis = torch.Tensor([0, 1, 0]).repeat(num_resets).to(self._device)
+
+        fall_direction_quat = quat_from_angle_axis(fall_direction, fall_direction_axis)
+        fall_angle_quat = quat_from_angle_axis(fall_angle, fall_angle_axis)
+
+
+        # root_pos, root_rot = self.initial_root_pos[env_ids], self.initial_root_rot[env_ids]
+        # root_vel = torch.zeros((num_resets, 6), device=self._device)
+        #
+        # self._robots.set_world_poses(root_pos, root_rot, indices=env_ids)
+        # self._robots.set_velocities(root_vel, indices=env_ids)
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
