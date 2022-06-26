@@ -15,6 +15,7 @@ from omni.isaac.isaac_sensor import _isaac_sensor
 
 import numpy as np
 import torch
+import torch.nn.functional as f
 import math
 import random
 
@@ -26,9 +27,18 @@ def euler_to_quaternion(r):
     qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
     return [qx, qy, qz, qw]
 
+# def q2falling(q):
+#     fall_angle =  2*torch.acos(q[:,0])*torch.sqrt((q[:,1]*q[:,1] + q[:,2]*q[:,2])/(q[:,1]*q[:,1]) + q[:,2]*q[:,2] + q[:,3]*q[:,3])
+#     return fall_angle
+
+# def q2falling(robots_orientation):
+#     up_vectors = torch.zeros_like(robots_orientation)
+#     up_vectors[:, 3] = 1
+#     return torch_rot.quat_diff_rad(robots_orientation, up_vectors)
+
 def q2falling(q):
-    fall_angle =  2*torch.acos(q[:,0])*torch.sqrt((q[:,1]*q[:,1] + q[:,2]*q[:,2])/(q[:,1]*q[:,1]) + q[:,2]*q[:,2] + q[:,3]*q[:,3])
-    return fall_angle
+    norm_vec = f.normalize(q[:, 1:], p=1, dim=1)
+    return 2 * torch.acos(q[:, 0]) * torch.sqrt((norm_vec[:, 0] * norm_vec[:, 0] + norm_vec[:, 1] * norm_vec[:, 1]))
 
 class MooncakeTask(RLTask):
     def __init__(
@@ -193,7 +203,7 @@ class MooncakeTask(RLTask):
 
         ## Apply Robot position ##
         robot_pos = ball_pos.clone()    # use ball position as reference
-        robot_offset = torch.Tensor([0, 0, 0.19]).repeat(num_resets).to(self._device).reshape(-1, 3)  # Distance from ball center to robot center is 18 cm.
+        robot_offset = torch.Tensor([0, 0, 0.198]).repeat(num_resets).to(self._device).reshape(-1, 3)  # Distance from ball center to robot center is 18 cm.
 
         robot_pos = robot_pos + robot_offset
         # robot_pos = robot_pos + torch_rot.quat_rotate(fall_angle_quat, torch_rot.quat_rotate(fall_direction_quat, robot_offset))
@@ -235,9 +245,20 @@ class MooncakeTask(RLTask):
         self.reset_idx(indices)
 
     def calculate_metrics(self) -> None:    # calculate reward for each env
-        reaction_vel = self.obs_buf[:, 0]
+        wheel0_vel = self.obs_buf[:, 0]
+        wheel1_vel = self.obs_buf[:, 1]
+        wheel2_vel = self.obs_buf[:, 2]
+
         robots_position, robots_orientation = self._robots.get_world_poses()
+        robots_omega = self._robots.get_angular_velocities()
         fall_angles = q2falling(robots_orientation) # find fall angle of all robot (batched)
+
+        # test_a = torch.zeros_like(robots_orientation)
+        # test_a[:, 0] = 1
+        # test_b = torch.zeros_like(robots_orientation)
+        # test_b[:, 0] = 1
+        # print(torch_rot.quat_diff_rad(test_a, test_b))
+
         # cart_pos = self.obs_buf[:, 0]
         # cart_vel = self.obs_buf[:, 1]
         # pole_angle = self.obs_buf[:, 2]
@@ -246,8 +267,11 @@ class MooncakeTask(RLTask):
         # reward = 1.0 - pole_angle * pole_angle - 0.01 * torch.abs(cart_vel) - 0.005 * torch.abs(pole_vel)
         # reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
         # reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
-        reward = 1.0 - fall_angles * fall_angles - 0.01 * torch.abs(reaction_vel)
-        reward = torch.where(torch.abs(fall_angles) > 25*(np.pi / 180), torch.ones_like(reward) * -2.0, reward)   # fall_angle must <= 50 degree
+        # fall_reward = torch.where(fall_angles > 0.2, -fall_angles, 2.0)
+        reward = 1.0 - fall_angles**fall_angles \
+                 - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
+                 - torch.abs(robots_omega[:, 2]) # try not to rotate around Z-axis
+        # reward = torch.where(torch.abs(fall_angles) > 25*(np.pi / 180), torch.ones_like(reward) * -2.0, reward)   # fall_angle must <= 50 degree
 
         self.rew_buf[:] = reward
 
@@ -261,10 +285,7 @@ class MooncakeTask(RLTask):
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         # resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)
 
-        resets = torch.where(robot_z_position < 0.2, 1, 0)   # reset by falling (Z-position)
-        # print(robots_position)
-        # print("RESET")
-        # print(resets)
-        # resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, 0)           # reset by falling (angle)
+        resets = torch.where(robot_z_position < 0.25, 1, 0)                              # reset by falling (Z-position)
+        resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, resets)      # reset by falling (angle)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)  # reset by time
         self.reset_buf[:] = resets
