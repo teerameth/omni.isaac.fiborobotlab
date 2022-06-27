@@ -15,6 +15,21 @@ env:
   clipActions: 1.0
   controlFrequencyInv: 2 # 60 Hz
 
+  # reward parameters
+  headingWeight: 0.5
+  upWeight: 0.1
+
+  # cost parameters
+  actionsCost: 0.01
+  energyCost: 0.05
+  dofVelocityScale: 0.1
+  angularVelocityScale: 0.25
+  contactForceScale: 0.01
+  jointsAtLimitCost: 0.25
+  deathCost: -1.0
+  terminationHeight: 0.8
+  alive_reward_scale: 2.0
+
 sim:
   dt: 0.01 # 1/100 s
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}

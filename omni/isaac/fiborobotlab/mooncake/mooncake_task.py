@@ -61,6 +61,16 @@ class MooncakeTask(RLTask):
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
         self._max_wheel_velocity = self._task_cfg["env"]["maxWheelVelocity"]
+        self.heading_weight = self._task_cfg["env"]["headingWeight"]
+        self.up_weight = self._task_cfg["env"]["upWeight"]
+        self.actions_cost_scale = self._task_cfg["env"]["actionsCost"]
+        self.energy_cost_scale = self._task_cfg["env"]["energyCost"]
+        self.joints_at_limit_cost_scale = self._task_cfg["env"]["jointsAtLimitCost"]
+        self.death_cost = self._task_cfg["env"]["deathCost"]
+        self.termination_height = self._task_cfg["env"]["terminationHeight"]
+        self.alive_reward_scale = self._task_cfg["env"]["alive_reward_scale"]
+
+
         self._max_episode_length = 500
 
         self._num_observations = 9
@@ -154,6 +164,7 @@ class MooncakeTask(RLTask):
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids)
 
+        self.actions = actions.clone().to(self._device)     # save for later energy calculation
         actions = actions.to(self._device)
         actions = 2*(actions - 0.5)
 
@@ -253,27 +264,44 @@ class MooncakeTask(RLTask):
         robots_omega = self._robots.get_angular_velocities()
         fall_angles = q2falling(robots_orientation) # find fall angle of all robot (batched)
 
-        # test_a = torch.zeros_like(robots_orientation)
-        # test_a[:, 0] = 1
-        # test_b = torch.zeros_like(robots_orientation)
-        # test_b[:, 0] = 1
-        # print(torch_rot.quat_diff_rad(test_a, test_b))
+        ## aligning up axis of robot and environment
+        up_proj = torch.cos(fall_angles)
+        up_reward = torch.zeros_like(fall_angles)
+        up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
 
-        # cart_pos = self.obs_buf[:, 0]
-        # cart_vel = self.obs_buf[:, 1]
-        # pole_angle = self.obs_buf[:, 2]
-        # pole_vel = self.obs_buf[:, 3]
+        ## energy penalty for movement
+        actions_cost = torch.sum(self.actions ** 2, dim=-1)
+        # electricity_cost = torch.sum(torch.abs(self.actions * obs_buf[:, 12+num_dof:12+num_dof*2])* self.motor_effort_ratio.unsqueeze(0), dim=-1)
 
-        # reward = 1.0 - pole_angle * pole_angle - 0.01 * torch.abs(cart_vel) - 0.005 * torch.abs(pole_vel)
-        # reward = torch.where(torch.abs(cart_pos) > self._reset_dist, torch.ones_like(reward) * -2.0, reward)
-        # reward = torch.where(torch.abs(pole_angle) > np.pi / 2, torch.ones_like(reward) * -2.0, reward)
-        # fall_reward = torch.where(fall_angles > 0.2, -fall_angles, 2.0)
-        reward = 1.0 - fall_angles**fall_angles \
-                 - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
-                 - torch.abs(robots_omega[:, 2]) # try not to rotate around Z-axis
-        # reward = torch.where(torch.abs(fall_angles) > 25*(np.pi / 180), torch.ones_like(reward) * -2.0, reward)   # fall_angle must <= 50 degree
+        ## rotation penality
+        # rotation_cost = torch.sum(robots_omega ** 2, dim=-1)
+        rotation_cost = torch.sum(torch_rot.quat_diff_rad(robots_orientation, self.initial_root_rot)** 2, dim=-1)
+        # print(rotation_cost)
 
-        self.rew_buf[:] = reward
+
+        ## reward for duration of staying alive
+        alive_reward = torch.ones_like(fall_angles) * self.alive_reward_scale
+        # progress_reward = potentials - prev_potentials
+
+        total_reward = (
+            alive_reward
+            + up_reward
+            - actions_cost * self.actions_cost_scale
+            - rotation_cost
+        )
+
+        # adjust reward for fallen agents
+        total_reward = torch.where(
+            robots_position[:, 2] < self.termination_height,
+            torch.ones_like(total_reward) * self.death_cost,
+            total_reward
+        )
+
+        # reward = 1.0 - fall_angles**fall_angles \
+        #          - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
+        #          - torch.abs(robots_omega[:, 2]) # try not to rotate around Z-axis
+
+        self.rew_buf[:] = total_reward
 
     def is_done(self) -> None:  # check termination for each env
         robots_position, robots_orientation = self._robots.get_world_poses()

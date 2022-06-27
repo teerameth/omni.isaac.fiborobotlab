@@ -179,6 +179,35 @@ class Extension(omni.ext.IExt):
             visualize=True,
         )
 
+        ## USE 3 IMUs ##
+        # result, sensor = omni.kit.commands.execute(
+        #     "IsaacSensorCreateImuSensor",
+        #     path="/sensor0",
+        #     parent=self.body_path,
+        #     sensor_period=1 / 500.0,  # 2ms
+        #     offset=Gf.Vec3d(0, 15, 17.15),  # translate to upper surface of /mooncake/top_plate
+        #     orientation=Gf.Quatd(1, 0, 0, 0),  # (x, y, z, w)
+        #     visualize=True,
+        # )
+        # result, sensor = omni.kit.commands.execute(
+        #     "IsaacSensorCreateImuSensor",
+        #     path="/sensor1",
+        #     parent=self.body_path,
+        #     sensor_period=1 / 500.0,  # 2ms
+        #     offset=Gf.Vec3d(15*math.sqrt(3)/2, -15/2, 17.15),  # translate to surface of /mooncake/top_plate
+        #     orientation=Gf.Quatd(1, 0, 0, 0),  # (x, y, z, w)
+        #     visualize=True,
+        # )
+        # result, sensor = omni.kit.commands.execute(
+        #     "IsaacSensorCreateImuSensor",
+        #     path="/sensor2",
+        #     parent=self.body_path,
+        #     sensor_period=1 / 500.0,  # 2ms
+        #     offset=Gf.Vec3d(-15*math.sqrt(3)/2, -15/2, 17.15),  # translate to surface of /mooncake/top_plate
+        #     orientation=Gf.Quatd(1, 0, 0, 0),  # (x, y, z, w)
+        #     visualize=True,
+        # )
+
     def _on_config_drives(self):
         # self._on_config_robot()  # make sure drives are configured first
         stage = omni.usd.get_context().get_stage()
