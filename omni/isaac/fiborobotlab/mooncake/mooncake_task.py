@@ -71,13 +71,14 @@ class MooncakeTask(RLTask):
         self.alive_reward_scale = self._task_cfg["env"]["alive_reward_scale"]
 
 
-        self._max_episode_length = 500
+        self._max_episode_length = 5000
 
-        self._num_observations = 9
+        self._num_observations = 15
         self._num_actions = 3
 
         self._imu_buf = [{"lin_acc_x":0.0, "lin_acc_y":0.0, "lin_acc_z":0.0, "ang_vel_x":0.0, "ang_vel_y":0.0, "ang_vel_z":0.0}]*128  # default initial sensor buffer
         self._is = _isaac_sensor.acquire_imu_sensor_interface()     # Sensor reader
+        self.previous_fall_angle = None
         RLTask.__init__(self, name, env)
 
         return
@@ -151,6 +152,16 @@ class MooncakeTask(RLTask):
         self.obs_buf[:, 7] = imu_gyro_y
         self.obs_buf[:, 8] = imu_gyro_z
 
+        robot_v = self._robots.get_linear_velocities()
+        ball_v = self._robots.get_linear_velocities()
+        self.obs_buf[:, 9] = robot_v[:, 0]
+        self.obs_buf[:, 10] = robot_v[:, 1]
+        self.obs_buf[:, 11] = robot_v[:, 2]
+        self.obs_buf[:, 12] = ball_v[:, 0]
+        self.obs_buf[:, 13] = ball_v[:, 1]
+        self.obs_buf[:, 14] = ball_v[:, 2]
+
+
         observations = {
             self._robots.name: {
                 "obs_buf": self.obs_buf
@@ -168,14 +179,25 @@ class MooncakeTask(RLTask):
         actions = actions.to(self._device)
         actions = 2*(actions - 0.5)
 
-        velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
-        velocities[:, self._wheel_0_dof_idx] = self._max_wheel_velocity * actions[:, 0]
-        velocities[:, self._wheel_1_dof_idx] = self._max_wheel_velocity * actions[:, 1]
-        velocities[:, self._wheel_2_dof_idx] = self._max_wheel_velocity * actions[:, 2]
+        actions[:, 0] = actions[:, 0] * self._max_wheel_velocity
+        actions[:, 1] = actions[:, 1] * self._max_wheel_velocity
+        actions[:, 2] = actions[:, 2] * 0.5   # omega_bz
+
+        # wheel_velocities = [[math.cos(wheel_angle), 0, -math.sin(wheel_angle)], [-math.cos(wheel_angle)/2, math.sqrt(3)*math.cos(wheel_angle)/2, -math.sin(wheel_angle)], [-math.cos(wheel_angle)/2, -math.sqrt(3)*math.cos(wheel_angle)/2, -math.sin(wheel_angle)]]
+        wheel_velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
+        wheel_velocities[:, self._wheel_0_dof_idx] = -12.8558 * actions[:, 1] - 11.0172 * actions[:, 2]
+        wheel_velocities[:, self._wheel_1_dof_idx] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
+        wheel_velocities[:, self._wheel_2_dof_idx] = 6.4279 * actions[:, 0] - 11.1334 * actions[:, 1] + 8.2664 * actions[:, 2]
+        velocities = wheel_velocities
+
+        # velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
+        # velocities[:, self._wheel_0_dof_idx] = self._max_wheel_velocity * actions[:, 0]
+        # velocities[:, self._wheel_1_dof_idx] = self._max_wheel_velocity * actions[:, 1]
+        # velocities[:, self._wheel_2_dof_idx] = self._max_wheel_velocity * actions[:, 2]
 
         indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
         self._robots.set_joint_velocities(velocities=velocities, indices=indices) # apply joints velocity (rad/s)
-        # self._robots.set_joint_efforts(forces, indices=indices) # apply joints torque
+        # self._robots.set_joint_efforts(efforts=velocities, indices=indices) # apply joints torque
 
         ## Read IMU & store in buffer ##
         buffer = []
@@ -267,7 +289,8 @@ class MooncakeTask(RLTask):
         ## aligning up axis of robot and environment
         up_proj = torch.cos(fall_angles)
         up_reward = torch.zeros_like(fall_angles)
-        up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
+        # up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
+        falling_penalty = fall_angles
 
         ## energy penalty for movement
         actions_cost = torch.sum(self.actions ** 2, dim=-1)
@@ -286,13 +309,20 @@ class MooncakeTask(RLTask):
         total_reward = (
             alive_reward
             + up_reward
-            - actions_cost * self.actions_cost_scale
-            - rotation_cost
+            - falling_penalty * 5
+            # - actions_cost * self.actions_cost_scale
+            # - torch.sum(robots_omega**2, dim=-1) * 10
+            # - rotation_cost**2 * 10
         )
 
         # adjust reward for fallen agents
         total_reward = torch.where(
-            robots_position[:, 2] < self.termination_height,
+            robots_position[:, 2] < self.termination_height,    # fall by height
+            torch.ones_like(total_reward) * self.death_cost,
+            total_reward
+        )
+        total_reward = torch.where(
+            fall_angles > 50 / 180 * math.pi,   # fall by angle
             torch.ones_like(total_reward) * self.death_cost,
             total_reward
         )
@@ -313,7 +343,7 @@ class MooncakeTask(RLTask):
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         # resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)
 
-        resets = torch.where(robot_z_position < 0.25, 1, 0)                              # reset by falling (Z-position)
+        resets = torch.where(robot_z_position < self.termination_height, 1, 0)                              # reset by falling (Z-position)
         resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, resets)      # reset by falling (angle)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)  # reset by time
         self.reset_buf[:] = resets
