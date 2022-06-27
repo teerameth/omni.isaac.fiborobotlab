@@ -189,6 +189,7 @@ class MooncakeTask(RLTask):
         wheel_velocities[:, self._wheel_1_dof_idx] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
         wheel_velocities[:, self._wheel_2_dof_idx] = 6.4279 * actions[:, 0] - 11.1334 * actions[:, 1] + 8.2664 * actions[:, 2]
         velocities = wheel_velocities
+        self.wheel_velocities = wheel_velocities.clone().to(self._device)     # save for later energy calculation
 
         # velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
         # velocities[:, self._wheel_0_dof_idx] = self._max_wheel_velocity * actions[:, 0]
@@ -286,14 +287,17 @@ class MooncakeTask(RLTask):
         robots_omega = self._robots.get_angular_velocities()
         fall_angles = q2falling(robots_orientation) # find fall angle of all robot (batched)
 
+        if self.previous_fall_angle is None: falling_penalty = 0
+        else: falling_penalty = fall_angles - self.previous_fall_angle
+
         ## aligning up axis of robot and environment
         up_proj = torch.cos(fall_angles)
         up_reward = torch.zeros_like(fall_angles)
         # up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
-        falling_penalty = fall_angles
+        # falling_penalty = fall_angles
 
         ## energy penalty for movement
-        actions_cost = torch.sum(self.actions ** 2, dim=-1)
+        actions_cost = torch.sum(self.wheel_velocities ** 2, dim=-1)
         # electricity_cost = torch.sum(torch.abs(self.actions * obs_buf[:, 12+num_dof:12+num_dof*2])* self.motor_effort_ratio.unsqueeze(0), dim=-1)
 
         ## rotation penality
@@ -307,12 +311,12 @@ class MooncakeTask(RLTask):
         # progress_reward = potentials - prev_potentials
 
         total_reward = (
-            alive_reward
-            + up_reward
-            - falling_penalty * 5
+            # alive_reward
+            # + up_reward
+            - math.e**(-0.01*fall_angles)
             # - actions_cost * self.actions_cost_scale
             # - torch.sum(robots_omega**2, dim=-1) * 10
-            # - rotation_cost**2 * 10
+            - rotation_cost * 10
         )
 
         # adjust reward for fallen agents
@@ -330,7 +334,7 @@ class MooncakeTask(RLTask):
         # reward = 1.0 - fall_angles**fall_angles \
         #          - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
         #          - torch.abs(robots_omega[:, 2]) # try not to rotate around Z-axis
-
+        self.previous_fall_angle = fall_angles
         self.rew_buf[:] = total_reward
 
     def is_done(self) -> None:  # check termination for each env
