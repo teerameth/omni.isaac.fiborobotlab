@@ -55,8 +55,10 @@ class MooncakeTask(RLTask):
 
         self._num_envs = self._task_cfg["env"]["numEnvs"]
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
-        self._robot_positions = torch.tensor([0.0, 0.0, 0.30])
+        self._ball_size = 0.12
         self._ball_positions = torch.tensor([0.0, 0.0, 0.12])   # ball diameter is 12 cm.
+        self._robot_offset = 0.1962
+        self._jump_offset = 0.005
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -96,8 +98,8 @@ class MooncakeTask(RLTask):
             ball_path = robot_path[:-18] + "/ball"    # remove "/Mooncake/mooncake" and add "/ball" instead
             cubeGeom = UsdGeom.Sphere.Define(stage, ball_path)
             cubePrim = stage.GetPrimAtPath(ball_path)
-            size = 0.12
-            offset = Gf.Vec3f(0.0, 0.0, 0.12)
+            size = self._ball_size
+            offset = Gf.Vec3f(0.0, 0.0, self._ball_size)
             cubeGeom.CreateRadiusAttr(size)
             cubeGeom.AddTranslateOp().Set(offset)
             # Attach Rigid Body and Collision Preset
@@ -117,7 +119,9 @@ class MooncakeTask(RLTask):
         return
 
     def get_mooncake(self):    # must be called at very first line of set_up_scene()
-        mooncake = Mooncake(prim_path=self.default_zero_env_path + "/Mooncake", name="Mooncake", translation=self._robot_positions)
+        robot_position = self._ball_positions
+        robot_position[2] += self._robot_offset
+        mooncake = Mooncake(prim_path=self.default_zero_env_path + "/Mooncake", name="Mooncake", translation=robot_position)
         # applies articulation settings from the task configuration yaml file
         self._sim_config.apply_articulation_settings("Mooncake", get_prim_at_path(mooncake.prim_path), self._sim_config.parse_actor_config("Mooncake"))
     def get_ball(self):
@@ -237,7 +241,7 @@ class MooncakeTask(RLTask):
 
         ## Apply Robot position ##
         robot_pos = ball_pos.clone()    # use ball position as reference
-        robot_offset = torch.Tensor([0, 0, 0.198]).repeat(num_resets).to(self._device).reshape(-1, 3)  # Distance from ball center to robot center is 18 cm.
+        robot_offset = torch.Tensor([0, 0, self._robot_offset]).repeat(num_resets).to(self._device).reshape(-1, 3)  # Distance from ball center to robot center is 18 cm.
 
         robot_pos = robot_pos + robot_offset
         # robot_pos = robot_pos + torch_rot.quat_rotate(fall_angle_quat, torch_rot.quat_rotate(fall_direction_quat, robot_offset))
@@ -283,18 +287,24 @@ class MooncakeTask(RLTask):
         wheel1_vel = self.obs_buf[:, 1]
         wheel2_vel = self.obs_buf[:, 2]
 
+        balls_position, balls_orientation = self._ball.get_world_poses()
         robots_position, robots_orientation = self._robots.get_world_poses()
         robots_omega = self._robots.get_angular_velocities()
         fall_angles = q2falling(robots_orientation) # find fall angle of all robot (batched)
-
-        if self.previous_fall_angle is None: falling_penalty = 0
-        else: falling_penalty = fall_angles - self.previous_fall_angle
+        if self.previous_fall_angle is None: falling_velocity = torch.zeros_like(robots_position[:, 0])
+        else: falling_velocity = fall_angles - self.previous_fall_angle
 
         ## aligning up axis of robot and environment
         up_proj = torch.cos(fall_angles)
         up_reward = torch.zeros_like(fall_angles)
         # up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
         # falling_penalty = fall_angles
+        q1 = self.initial_root_rot  # world frame
+        q2 = robots_orientation   # robot orientation
+        # find product of quaternions
+        product_quaternion = torch.sum(q1*q2,dim=-1) # <q1, q2>
+        quaternion_distance = 1 - (product_quaternion**2)
+        # print(quaternion_distance)
 
         ## energy penalty for movement
         actions_cost = torch.sum(self.wheel_velocities ** 2, dim=-1)
@@ -309,14 +319,17 @@ class MooncakeTask(RLTask):
         ## reward for duration of staying alive
         alive_reward = torch.ones_like(fall_angles) * self.alive_reward_scale
         # progress_reward = potentials - prev_potentials
-
+        # print(robots_position - balls_position)
+        # print(torch.sum((robots_position - balls_position)**2, dim=-1))
         total_reward = (
-            # alive_reward
+            - quaternion_distance**2
+            # - falling_velocity
+            + alive_reward
             # + up_reward
-            - math.e**(-0.01*fall_angles)
+            # - math.e**(-0.01*fall_angles)
             # - actions_cost * self.actions_cost_scale
             # - torch.sum(robots_omega**2, dim=-1) * 10
-            - rotation_cost * 10
+            # - rotation_cost * 10
         )
 
         # adjust reward for fallen agents
@@ -330,6 +343,11 @@ class MooncakeTask(RLTask):
             torch.ones_like(total_reward) * self.death_cost,
             total_reward
         )
+        total_reward = torch.where(
+            torch.sum((robots_position - balls_position)**2, dim=-1) > (self._robot_offset+self._jump_offset)**2,  # jump beyond jump_offset
+            torch.ones_like(total_reward) * self.death_cost,
+            total_reward
+        )
 
         # reward = 1.0 - fall_angles**fall_angles \
         #          - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
@@ -338,6 +356,7 @@ class MooncakeTask(RLTask):
         self.rew_buf[:] = total_reward
 
     def is_done(self) -> None:  # check termination for each env
+        balls_position, balls_orientation = self._ball.get_world_poses()
         robots_position, robots_orientation = self._robots.get_world_poses()
         fall_angles = q2falling(robots_orientation)  # find fall angle of all robot (batched)
         robot_z_position = robots_position[:, 2]
@@ -347,7 +366,9 @@ class MooncakeTask(RLTask):
         # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
         # resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)
 
-        resets = torch.where(robot_z_position < self.termination_height, 1, 0)                              # reset by falling (Z-position)
-        resets = torch.where(torch.abs(fall_angles) > 50*(np.pi / 180), 1, resets)      # reset by falling (angle)
+        resets = torch.where(torch.sum((robots_position - balls_position)**2, dim=-1) > (self._robot_offset+self._jump_offset)**2, 1, 0) # jump beyond jump_offset
+        # print(resets)
+        resets = torch.where(robot_z_position < 0.25, 1, resets)          # reset by falling (Z-position)
+        resets = torch.where(fall_angles > 50*(np.pi / 180), 1, resets)      # reset by falling (angle)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)  # reset by time
         self.reset_buf[:] = resets

@@ -9,7 +9,7 @@ env:
   envSpacing: 1.0
   resetDist: 3.0
   maxEffort: 100
-  maxWheelVelocity: 5
+  maxWheelVelocity: 0.5
 
   clipObservations: 5.0
   clipActions: 1.0
@@ -27,7 +27,7 @@ env:
   contactForceScale: 0.01
   jointsAtLimitCost: 0.25
   deathCost: -1.0
-  terminationHeight: 0.8
+  terminationHeight: 0.25
   alive_reward_scale: 2.0
 
 sim:
