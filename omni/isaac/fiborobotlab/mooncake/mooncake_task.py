@@ -4,6 +4,7 @@ from omniisaacgymenvs.tasks.base.rl_task import RLTask
 from mooncake import Mooncake, Ball
 
 import omni
+from scripts.common import set_drive_parameters
 from pxr import UsdPhysics, Gf, UsdGeom
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.prims import RigidPrimView
@@ -58,7 +59,7 @@ class MooncakeTask(RLTask):
         self._ball_size = 0.12
         self._ball_positions = torch.tensor([0.0, 0.0, 0.12])   # ball diameter is 12 cm.
         self._robot_offset = 0.1962
-        self._jump_offset = 0.005
+        self._jump_offset = 0.01
 
         self._reset_dist = self._task_cfg["env"]["resetDist"]
         self._max_push_effort = self._task_cfg["env"]["maxEffort"]
@@ -97,18 +98,22 @@ class MooncakeTask(RLTask):
         for robot_path in self._robots.prim_paths:
             ball_path = robot_path[:-18] + "/ball"    # remove "/Mooncake/mooncake" and add "/ball" instead
             cubeGeom = UsdGeom.Sphere.Define(stage, ball_path)
-            cubePrim = stage.GetPrimAtPath(ball_path)
+            ballPrim = stage.GetPrimAtPath(ball_path)
             size = self._ball_size
             offset = Gf.Vec3f(0.0, 0.0, self._ball_size)
             cubeGeom.CreateRadiusAttr(size)
             cubeGeom.AddTranslateOp().Set(offset)
             # Attach Rigid Body and Collision Preset
-            rigid_api = UsdPhysics.RigidBodyAPI.Apply(cubePrim)
-            mass_api = UsdPhysics.MassAPI.Apply(cubePrim)
+            rigid_api = UsdPhysics.RigidBodyAPI.Apply(ballPrim)
+            mass_api = UsdPhysics.MassAPI.Apply(ballPrim)
             mass_api.CreateMassAttr(4)
             rigid_api.CreateRigidBodyEnabledAttr(True)
 
-            UsdPhysics.CollisionAPI.Apply(cubePrim)
+            UsdPhysics.CollisionAPI.Apply(ballPrim)
+
+            phys_api = UsdPhysics.MaterialAPI.Apply(ballPrim)
+            phys_api.CreateStaticFrictionAttr().Set(3.0)
+            phys_api.CreateDynamicFrictionAttr().Set(3.0)
 
         print(get_all_matching_child_prims("/"))
         self._ball = RigidPrimView(prim_paths_expr="/World/envs/*/ball", name="ball_view")
@@ -180,19 +185,19 @@ class MooncakeTask(RLTask):
             self.reset_idx(reset_env_ids)
 
         self.actions = actions.clone().to(self._device)     # save for later energy calculation
-        actions = actions.to(self._device)
-        actions = 2*(actions - 0.5)
+        actions = actions.to(self._device) * self._max_wheel_velocity
+        # actions = 2*(actions - 0.5)
 
-        actions[:, 0] = actions[:, 0] * self._max_wheel_velocity
-        actions[:, 1] = actions[:, 1] * self._max_wheel_velocity
-        actions[:, 2] = actions[:, 2] * 0.5   # omega_bz
+        # actions[:, 0] = actions[:, 0] * self._max_wheel_velocity
+        # actions[:, 1] = actions[:, 1] * self._max_wheel_velocity
+        # actions[:, 2] = actions[:, 2] * 0.5   # omega_bz
 
-        # wheel_velocities = [[math.cos(wheel_angle), 0, -math.sin(wheel_angle)], [-math.cos(wheel_angle)/2, math.sqrt(3)*math.cos(wheel_angle)/2, -math.sin(wheel_angle)], [-math.cos(wheel_angle)/2, -math.sqrt(3)*math.cos(wheel_angle)/2, -math.sin(wheel_angle)]]
-        wheel_velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
-        wheel_velocities[:, self._wheel_0_dof_idx] = -12.8558 * actions[:, 1] - 11.0172 * actions[:, 2]
-        wheel_velocities[:, self._wheel_1_dof_idx] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
-        wheel_velocities[:, self._wheel_2_dof_idx] = 6.4279 * actions[:, 0] - 11.1334 * actions[:, 1] + 8.2664 * actions[:, 2]
-        velocities = wheel_velocities
+        wheel_velocities = torch.zeros((self._robots.count, 3), dtype=torch.float32, device=self._device)
+        wheel_velocities[:, 0] = -12.8558 * actions[:, 1] - 11.0172 * actions[:, 2]
+        wheel_velocities[:, 1] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
+        wheel_velocities[:, 2] = 6.4279 * actions[:, 1] - 11.1334 * actions[:, 0] + 8.2664 * actions[:, 2]
+
+        # velocities = wheel_velocities
         self.wheel_velocities = wheel_velocities.clone().to(self._device)     # save for later energy calculation
 
         # velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
@@ -200,10 +205,18 @@ class MooncakeTask(RLTask):
         # velocities[:, self._wheel_1_dof_idx] = self._max_wheel_velocity * actions[:, 1]
         # velocities[:, self._wheel_2_dof_idx] = self._max_wheel_velocity * actions[:, 2]
 
-        indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
-        self._robots.set_joint_velocities(velocities=velocities, indices=indices) # apply joints velocity (rad/s)
-        # self._robots.set_joint_efforts(efforts=velocities, indices=indices) # apply joints torque
-
+        # indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
+        # self._robots.set_joint_velocities(velocities=velocities, indices=indices) # apply joints velocity (rad/s)
+        # self._robots.set_joint_efforts(efforts=wheel_velocities, indices=indices) # apply joints torque
+        # Apply joint velocities
+        stage = omni.usd.get_context().get_stage()
+        for env in range(self._num_envs):
+            axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_0_joint".format(env)), "angular")
+            axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_1_joint".format(env)), "angular")
+            axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_2_joint".format(env)), "angular")
+            set_drive_parameters(axle_0, "velocity", math.degrees(wheel_velocities[env, 0]), 0, math.radians(1e7))
+            set_drive_parameters(axle_1, "velocity", math.degrees(wheel_velocities[env, 1]), 0, math.radians(1e7))
+            set_drive_parameters(axle_2, "velocity", math.degrees(wheel_velocities[env, 2]), 0, math.radians(1e7))
         ## Read IMU & store in buffer ##
         buffer = []
         robots_prim_path = self._robots.prim_paths
@@ -295,8 +308,8 @@ class MooncakeTask(RLTask):
         else: falling_velocity = fall_angles - self.previous_fall_angle
 
         ## aligning up axis of robot and environment
-        up_proj = torch.cos(fall_angles)
-        up_reward = torch.zeros_like(fall_angles)
+        # up_proj = torch.cos(fall_angles)
+        # up_reward = torch.zeros_like(fall_angles)
         # up_reward = torch.where(up_proj > 0.93, up_reward + self.up_weight, up_reward)
         # falling_penalty = fall_angles
         q1 = self.initial_root_rot  # world frame
@@ -311,9 +324,7 @@ class MooncakeTask(RLTask):
         # electricity_cost = torch.sum(torch.abs(self.actions * obs_buf[:, 12+num_dof:12+num_dof*2])* self.motor_effort_ratio.unsqueeze(0), dim=-1)
 
         ## rotation penality
-        # rotation_cost = torch.sum(robots_omega ** 2, dim=-1)
-        rotation_cost = torch.sum(torch_rot.quat_diff_rad(robots_orientation, self.initial_root_rot)** 2, dim=-1)
-        # print(rotation_cost)
+        # rotation_cost = torch.sum(torch_rot.quat_diff_rad(robots_orientation, self.initial_root_rot)** 2, dim=-1)
 
 
         ## reward for duration of staying alive
@@ -322,7 +333,7 @@ class MooncakeTask(RLTask):
         # print(robots_position - balls_position)
         # print(torch.sum((robots_position - balls_position)**2, dim=-1))
         total_reward = (
-            - quaternion_distance**2
+            - quaternion_distance
             # - falling_velocity
             + alive_reward
             # + up_reward
@@ -349,9 +360,6 @@ class MooncakeTask(RLTask):
             total_reward
         )
 
-        # reward = 1.0 - fall_angles**fall_angles \
-        #          - 0.01 * (torch.abs(wheel0_vel)+torch.abs(wheel1_vel)+torch.abs(wheel2_vel)) \
-        #          - torch.abs(robots_omega[:, 2]) # try not to rotate around Z-axis
         self.previous_fall_angle = fall_angles
         self.rew_buf[:] = total_reward
 
@@ -362,12 +370,8 @@ class MooncakeTask(RLTask):
         robot_z_position = robots_position[:, 2]
         # print("Z position", robot_z_position)
 
-        # resets = torch.where(torch.abs(cart_pos) > self._reset_dist, 1, 0)
-        # resets = torch.where(torch.abs(pole_pos) > math.pi / 2, 1, resets)
-        # resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)
-
-        resets = torch.where(torch.sum((robots_position - balls_position)**2, dim=-1) > (self._robot_offset+self._jump_offset)**2, 1, 0) # jump beyond jump_offset
-        # print(resets)
+        resets = torch.zeros(self._num_envs, dtype=torch.long, device=self._device)
+        resets = torch.where(torch.sum((robots_position - balls_position)**2, dim=-1) > (self._robot_offset+self._jump_offset)**2, 1, resets) # jump beyond jump_offset
         resets = torch.where(robot_z_position < 0.25, 1, resets)          # reset by falling (Z-position)
         resets = torch.where(fall_angles > 50*(np.pi / 180), 1, resets)      # reset by falling (angle)
         resets = torch.where(self.progress_buf >= self._max_episode_length, 1, resets)  # reset by time
