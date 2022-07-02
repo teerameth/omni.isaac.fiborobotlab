@@ -5,11 +5,11 @@ physics_engine: ${..physics_engine}
 
 # if given, will override the device setting in gym. 
 env:
-  numEnvs: ${resolve_default:128,${...num_envs}}
+  numEnvs: ${resolve_default:32,${...num_envs}}
   envSpacing: 1.0
   resetDist: 3.0
   maxEffort: 100
-  maxWheelVelocity: 0.5
+  maxWheelVelocity: 0.3
 
   clipObservations: 5.0
   clipActions: 1.0

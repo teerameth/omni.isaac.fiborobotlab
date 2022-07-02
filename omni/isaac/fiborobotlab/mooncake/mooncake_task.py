@@ -198,12 +198,13 @@ class MooncakeTask(RLTask):
         # wheel_velocities[:, 2] = 6.4279 * actions[:, 1] - 11.1334 * actions[:, 0] + 8.2664 * actions[:, 2]
         # self.wheel_velocities = wheel_velocities.clone().to(self._device)  # save for later energy calculation
 
-        wheel_effort = torch.zeros((self._robots.count, 3), dtype=torch.float32, device=self._device)
-        wheel_effort[:, 0] = actions[:, 0] * self._max_push_effort
-        wheel_effort[:, 1] = actions[:, 1] * self._max_push_effort
-        wheel_effort[:, 2] = actions[:, 2] * self._max_push_effort
+        wheel_effort = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
+        wheel_effort[:, self._wheel_0_dof_idx] = actions[:, 0] * self._max_push_effort
+        wheel_effort[:, self._wheel_1_dof_idx] = actions[:, 1] * self._max_push_effort
+        wheel_effort[:, self._wheel_2_dof_idx] = actions[:, 2] * self._max_push_effort
 
         # Apply joint velocities
+        from omni.isaac.core.utils.types import ArticulationActions # batched version of ArticulationAction
         stage = omni.usd.get_context().get_stage()
         for env in range(self._num_envs):
             axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_0_joint".format(env)), "angular")
@@ -212,9 +213,12 @@ class MooncakeTask(RLTask):
             # set_drive_parameters(axle_0, "velocity", math.degrees(wheel_velocities[env, 0]), 0, math.radians(1e7))
             # set_drive_parameters(axle_1, "velocity", math.degrees(wheel_velocities[env, 1]), 0, math.radians(1e7))
             # set_drive_parameters(axle_2, "velocity", math.degrees(wheel_velocities[env, 2]), 0, math.radians(1e7))
-            set_drive_parameters(axle_0, "effort", wheel_effort[env, 0], 0, math.radians(1e7))
-            set_drive_parameters(axle_1, "effort", wheel_effort[env, 1], 0, math.radians(1e7))
-            set_drive_parameters(axle_2, "effort", wheel_effort[env, 2], 0, math.radians(1e7))
+            self._robots.apply_action(ArticulationActions(joint_efforts=wheel_effort))
+            # self._robots[env].apply_wheel_actions(ArticulationAction(joint_efforts=wheel_effort[env]))
+
+            # set_drive_parameters(axle_0, "effort", wheel_effort[env, 0], 0, math.radians(1e7))
+            # set_drive_parameters(axle_1, "effort", wheel_effort[env, 1], 0, math.radians(1e7))
+            # set_drive_parameters(axle_2, "effort", wheel_effort[env, 2], 0, math.radians(1e7))
 
         ## Read IMU & store in buffer ##
         buffer = []
