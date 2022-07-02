@@ -185,38 +185,37 @@ class MooncakeTask(RLTask):
             self.reset_idx(reset_env_ids)
 
         self.actions = actions.clone().to(self._device)     # save for later energy calculation
-        actions = actions.to(self._device) * self._max_wheel_velocity
-        # actions = 2*(actions - 0.5)
 
         # actions[:, 0] = actions[:, 0] * self._max_wheel_velocity
         # actions[:, 1] = actions[:, 1] * self._max_wheel_velocity
         # actions[:, 2] = actions[:, 2] * 0.5   # omega_bz
 
-        wheel_velocities = torch.zeros((self._robots.count, 3), dtype=torch.float32, device=self._device)
-        wheel_velocities[:, 0] = -12.8558 * actions[:, 1] - 11.0172 * actions[:, 2]
-        wheel_velocities[:, 1] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
-        wheel_velocities[:, 2] = 6.4279 * actions[:, 1] - 11.1334 * actions[:, 0] + 8.2664 * actions[:, 2]
+        # calculate wheel_velocities from wheel's kinematics
+        # actions = actions.to(self._device) * self._max_wheel_velocity
+        # wheel_velocities = torch.zeros((self._robots.count, 3), dtype=torch.float32, device=self._device)
+        # wheel_velocities[:, 0] = -12.8558 * actions[:, 1] - 11.0172 * actions[:, 2]
+        # wheel_velocities[:, 1] = 11.1334 * actions[:, 0] + 6.4279 * actions[:, 1] + 8.2664 * actions[:, 2]
+        # wheel_velocities[:, 2] = 6.4279 * actions[:, 1] - 11.1334 * actions[:, 0] + 8.2664 * actions[:, 2]
+        # self.wheel_velocities = wheel_velocities.clone().to(self._device)  # save for later energy calculation
 
-        # velocities = wheel_velocities
-        self.wheel_velocities = wheel_velocities.clone().to(self._device)     # save for later energy calculation
+        wheel_effort = torch.zeros((self._robots.count, 3), dtype=torch.float32, device=self._device)
+        wheel_effort[:, 0] = actions[:, 0] * self._max_push_effort
+        wheel_effort[:, 1] = actions[:, 1] * self._max_push_effort
+        wheel_effort[:, 2] = actions[:, 2] * self._max_push_effort
 
-        # velocities = torch.zeros((self._robots.count, self._robots.num_dof), dtype=torch.float32, device=self._device)
-        # velocities[:, self._wheel_0_dof_idx] = self._max_wheel_velocity * actions[:, 0]
-        # velocities[:, self._wheel_1_dof_idx] = self._max_wheel_velocity * actions[:, 1]
-        # velocities[:, self._wheel_2_dof_idx] = self._max_wheel_velocity * actions[:, 2]
-
-        # indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
-        # self._robots.set_joint_velocities(velocities=velocities, indices=indices) # apply joints velocity (rad/s)
-        # self._robots.set_joint_efforts(efforts=wheel_velocities, indices=indices) # apply joints torque
         # Apply joint velocities
         stage = omni.usd.get_context().get_stage()
         for env in range(self._num_envs):
             axle_0 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_0_joint".format(env)), "angular")
             axle_1 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_1_joint".format(env)), "angular")
             axle_2 = UsdPhysics.DriveAPI.Get(stage.GetPrimAtPath("/World/envs/env_{}/Mooncake/mooncake/base_plate/wheel_2_joint".format(env)), "angular")
-            set_drive_parameters(axle_0, "velocity", math.degrees(wheel_velocities[env, 0]), 0, math.radians(1e7))
-            set_drive_parameters(axle_1, "velocity", math.degrees(wheel_velocities[env, 1]), 0, math.radians(1e7))
-            set_drive_parameters(axle_2, "velocity", math.degrees(wheel_velocities[env, 2]), 0, math.radians(1e7))
+            # set_drive_parameters(axle_0, "velocity", math.degrees(wheel_velocities[env, 0]), 0, math.radians(1e7))
+            # set_drive_parameters(axle_1, "velocity", math.degrees(wheel_velocities[env, 1]), 0, math.radians(1e7))
+            # set_drive_parameters(axle_2, "velocity", math.degrees(wheel_velocities[env, 2]), 0, math.radians(1e7))
+            set_drive_parameters(axle_0, "effort", wheel_effort[env, 0], 0, math.radians(1e7))
+            set_drive_parameters(axle_1, "effort", wheel_effort[env, 1], 0, math.radians(1e7))
+            set_drive_parameters(axle_2, "effort", wheel_effort[env, 2], 0, math.radians(1e7))
+
         ## Read IMU & store in buffer ##
         buffer = []
         robots_prim_path = self._robots.prim_paths
@@ -320,7 +319,7 @@ class MooncakeTask(RLTask):
         # print(quaternion_distance)
 
         ## energy penalty for movement
-        actions_cost = torch.sum(self.wheel_velocities ** 2, dim=-1)
+        # actions_cost = torch.sum(self.wheel_velocities ** 2, dim=-1)
         # electricity_cost = torch.sum(torch.abs(self.actions * obs_buf[:, 12+num_dof:12+num_dof*2])* self.motor_effort_ratio.unsqueeze(0), dim=-1)
 
         ## rotation penality
