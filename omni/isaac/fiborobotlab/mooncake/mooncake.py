@@ -36,35 +36,6 @@ class Mooncake(Robot):
             articulation_controller=None,
         )
 
-class Ball(Robot):
-    def __init__(
-            self,
-            prim_path: str,
-            name: Optional[str] = "Ball",
-            usd_path: Optional[str] = None,
-            translation: Optional[np.ndarray] = None,
-            orientation: Optional[np.ndarray] = None,
-    ) -> None:
-        self._usd_path = usd_path
-        self._name = name
-
-        if self._usd_path is None:
-            server_path = get_server_path()
-            if server_path is None:
-                carb.log_error("Could not find Isaac Sim assets folder")
-            self._usd_path = server_path + "/Library/ball.usd"
-
-        add_reference_to_stage(self._usd_path, prim_path)
-
-        super().__init__(
-            prim_path=prim_path,
-            name=name,
-            translation=translation,
-            orientation=orientation,
-            articulation_controller=None,
-        )
-
-
         self._wheel_dof_indices = [self.get_dof_index("wheel_0_joint"),
                                    self.get_dof_index("wheel_1_joint"),
                                    self.get_dof_index("wheel_2_joint")]
@@ -97,3 +68,30 @@ class Ball(Robot):
 
         self.apply_action(control_actions=joint_actions)
         return
+# class Ball(Robot):
+#     def __init__(
+#             self,
+#             prim_path: str,
+#             name: Optional[str] = "Ball",
+#             usd_path: Optional[str] = None,
+#             translation: Optional[np.ndarray] = None,
+#             orientation: Optional[np.ndarray] = None,
+#     ) -> None:
+#         self._usd_path = usd_path
+#         self._name = name
+#
+#         if self._usd_path is None:
+#             server_path = get_server_path()
+#             if server_path is None:
+#                 carb.log_error("Could not find Isaac Sim assets folder")
+#             self._usd_path = server_path + "/Library/ball.usd"
+#
+#         add_reference_to_stage(self._usd_path, prim_path)
+#
+#         super().__init__(
+#             prim_path=prim_path,
+#             name=name,
+#             translation=translation,
+#             orientation=orientation,
+#             articulation_controller=None,
+#         )

@@ -6,22 +6,59 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
+import torch
 from torch import roll
 import omni
 import omni.kit.commands
+import omni.usd
+import omni.client
 import asyncio
 import math
 import weakref
 import omni.ui as ui
 from omni.kit.menu.utils import add_menu_items, remove_menu_items, MenuItemDescription
 from omni.isaac.isaac_sensor import _isaac_sensor
+from omni.isaac.core.prims import RigidPrimView
 
 from .common import set_drive_parameters
-from pxr import UsdLux, Sdf, Gf, UsdPhysics
+from pxr import UsdLux, Sdf, Gf, UsdPhysics, Usd, UsdGeom
 
 from omni.isaac.ui.ui_utils import setup_ui_headers, get_style, btn_builder
+from omni.isaac.core.utils.prims import get_prim_at_path
 
 EXTENSION_NAME = "Import Mooncake"
+def create_parent_xforms(asset_usd_path, source_prim_path, save_as_path=None):
+    """ Adds a new UsdGeom.Xform prim for each Mesh/Geometry prim under source_prim_path.
+        Moves material assignment to new parent prim if any exists on the Mesh/Geometry prim.
+
+        Args:
+            asset_usd_path (str): USD file path for asset
+            source_prim_path (str): USD path of root prim
+            save_as_path (str): USD file path for modified USD stage. Defaults to None, will save in same file.
+    """
+    omni.usd.get_context().open_stage(asset_usd_path)
+    stage = omni.usd.get_context().get_stage()
+
+    prims = [stage.GetPrimAtPath(source_prim_path)]
+    edits = Sdf.BatchNamespaceEdit()
+    while len(prims) > 0:
+        prim = prims.pop(0)
+        print(prim)
+        if prim.GetTypeName() in ["Mesh", "Capsule", "Sphere", "Box"]:
+            new_xform = UsdGeom.Xform.Define(stage, str(prim.GetPath()) + "_xform")
+            print(prim, new_xform)
+            edits.Add(Sdf.NamespaceEdit.Reparent(prim.GetPath(), new_xform.GetPath(), 0))
+            continue
+
+        children_prims = prim.GetChildren()
+        prims = prims + children_prims
+
+    stage.GetRootLayer().Apply(edits)
+
+    if save_as_path is None:
+        omni.usd.get_context().save_stage()
+    else:
+        omni.usd.get_context().save_as_stage(save_as_path)
 
 def velocity2omega(v_x, v_y, w_z=0, d=0.105, r=0.1):
     omega_0 = (v_x-d*w_z)/r
@@ -76,7 +113,7 @@ class Extension(omni.ext.IExt):
                             "label": "Load Robot",
                             "type": "button",
                             "text": "Load",
-                            "tooltip": "Load a UR10 Robot into the Scene",
+                            "tooltip": "Load a Mooncake Robot into the Scene",
                             "on_clicked_fn": self._on_load_robot,
                         }
                         btn_builder(**dict)
@@ -113,19 +150,6 @@ class Extension(omni.ext.IExt):
     async def _load_mooncake(self, task):
         done, pending = await asyncio.wait({task})
         if task in done:
-            status, import_config = omni.kit.commands.execute("URDFCreateImportConfig")
-            import_config.merge_fixed_joints = True
-            import_config.import_inertia_tensor = False
-            # import_config.distance_scale = 100
-            import_config.fix_base = False
-            import_config.make_default_prim = True
-            import_config.create_physics_scene = True
-            omni.kit.commands.execute(
-                "URDFParseAndImportFile",
-                urdf_path=self._extension_path + "/data/urdf/robots/mooncake/urdf/mooncake.urdf",
-                import_config=import_config,
-            )
-
             viewport = omni.kit.viewport_legacy.get_default_viewport_window()
             viewport.set_camera_position("/OmniverseKit_Persp", -1.02, 1.26, 0.5, True)
             viewport.set_camera_target("/OmniverseKit_Persp", 2.20, -2.18, -1.60, True)
@@ -133,20 +157,46 @@ class Extension(omni.ext.IExt):
             scene = UsdPhysics.Scene.Define(stage, Sdf.Path("/physicsScene"))
             scene.CreateGravityDirectionAttr().Set(Gf.Vec3f(0.0, 0.0, -1.0))
             scene.CreateGravityMagnitudeAttr().Set(9.81)
-
             result, plane_path = omni.kit.commands.execute(
                 "AddGroundPlaneCommand",
                 stage=stage,
                 planePath="/groundPlane",
                 axis="Z",
                 size=1500.0,
-                position=Gf.Vec3f(0, 0, -0.25),
+                position=Gf.Vec3f(0, 0, 0),
                 color=Gf.Vec3f(0.5),
             )
-            # make sure the ground plane is under root prim and not robot
-            omni.kit.commands.execute(
-                "MovePrimCommand", path_from=plane_path, path_to="/groundPlane", keep_world_transform=True
+            status, import_config = omni.kit.commands.execute("URDFCreateImportConfig")
+            import_config.merge_fixed_joints = True
+            import_config.import_inertia_tensor = False
+            # import_config.distance_scale = 100
+            import_config.fix_base = False
+            import_config.set_make_instanceable(True)
+            # import_config.set_instanceable_usd_path("./mooncake_instanceable.usd")
+            import_config.set_instanceable_usd_path("omniverse://localhost/Library/Robots/mooncake/mooncake_instanceable.usd")
+            import_config.set_default_drive_type(2)     # 0=None, 1=position, 2=velocity
+            import_config.make_default_prim = True
+            import_config.create_physics_scene = True
+            result, robot_path = omni.kit.commands.execute(
+                "URDFParseAndImportFile",
+                urdf_path=self._extension_path + "/data/urdf/robots/mooncake/urdf/mooncake.urdf",
+                import_config=import_config,
+                dest_path="omniverse://localhost/Library/Robots/mooncake/mooncake.usd"
             )
+            # convert_asset_instanceable(asset_usd_path=,     # USD file path to the current existing USD asset
+            #                            source_prim_path=,   # USD prim path of root prim of the asset
+            #                            save_as_path=None,   # USD file path for modified USD stage. Defaults to None, will save in same file.
+            #                            create_xforms=True)
+            # create_parent_xforms(
+            #     asset_usd_path='omniverse://localhost/Library/Robots/mooncake.usd',
+            #     source_prim_path="/mooncake",
+            #     save_as_path='omniverse://localhost/Library/Robots/mooncake_instanceable.usd'
+            # )
+
+            # make sure the ground plane is under root prim and not robot
+            # omni.kit.commands.execute(
+            #     "MovePrimCommand", path_from=robot_path, path_to="/mooncake", keep_world_transform=True
+            # )
 
             distantLight = UsdLux.DistantLight.Define(stage, Sdf.Path("/DistantLight"))
             distantLight.CreateIntensityAttr(500)
@@ -174,10 +224,63 @@ class Extension(omni.ext.IExt):
             path="/sensor",
             parent=self.body_path,
             sensor_period=1 / 500.0,            # 2ms
-            offset=Gf.Vec3d(0, 0, 17.15),       # translate to surface of /mooncake/top_plate
+            translation=Gf.Vec3d(0, 0, 17.15),  # translate to surface of /mooncake/top_plate
             orientation=Gf.Quatd(1, 0, 0, 0),   # (x, y, z, w)
             visualize=True,
         )
+
+        omni.kit.commands.execute('ChangeProperty',
+            prop_path=Sdf.Path('/mooncake.xformOp:translate'),
+            value=Gf.Vec3d(0.0, 0.0, 0.3162),
+            prev=Gf.Vec3d(0.0, 0.0, 0.0))
+        # Set Damping & Stiffness
+# Position Control: for position controlled joints, set a high stiffness and relatively low or zero damping.
+# Velocity Control: for velocity controller joints, set a high damping and zero stiffness.
+#         omni.kit.commands.execute('ChangeProperty',
+#                                   prop_path=Sdf.Path(
+#                                       '/mooncake/base_plate/wheel_0_joint.drive:angular:physics:stiffness'),
+#                                   value=0.0,
+#                                   prev=10000000.0)
+#         omni.kit.commands.execute('ChangeProperty',
+#                                   prop_path=Sdf.Path(
+#                                       '/mooncake/base_plate/wheel_1_joint.drive:angular:physics:stiffness'),
+#                                   value=0.0,
+#                                   prev=10000000.0)
+#         omni.kit.commands.execute('ChangeProperty',
+#                                   prop_path=Sdf.Path('/mooncake/base_plate/wheel_2_joint.drive:angular:physics:stiffness'),
+#                                   value=0.0,
+#                                   prev=10000000.0)
+
+        ###############
+        # Create Ball #
+        ###############
+        # result, ball_path = omni.kit.commands.execute(
+        #     "CreatePrimWithDefaultXform",
+        #     prim_type="Sphere",
+        #     attributes={'radius':0.12},
+        #     select_new_prim=True
+        # )
+        # omni.kit.commands.execute("MovePrimCommand", path_from='/mooncake/Sphere', path_to='/mooncake/ball')
+        # omni.kit.commands.execute('ChangeProperty',
+        #                           prop_path=Sdf.Path('/mooncake/ball.xformOp:translate'),
+        #                           value=Gf.Vec3d(0.0, 0.0, -0.1962),
+        #                           prev=Gf.Vec3d(0.0, 0.0, 0.0))
+        # omni.kit.commands.execute('SetRigidBody',
+        #                           path=Sdf.Path('/mooncake/ball'),
+        #                           approximationShape='convexHull',
+        #                           kinematic=False)
+        #
+        # omni.kit.commands.execute('AddPhysicsComponent',
+        #                           usd_prim=get_prim_at_path('/mooncake/ball'),
+        #                           component='PhysicsMassAPI')
+        # # omni.kit.commands.execute('ApplyAPISchema',
+        # #                           api= 'pxr.UsdPhysics.MassAPI',
+        # #                           prim=get_prim_at_path('/mooncake/ball'))
+        # omni.kit.commands.execute('ChangeProperty',
+        #                           prop_path=Sdf.Path('/mooncake/ball.physics:mass'),
+        #                           value=4.0,
+        #                           prev=0.0)
+
 
         ## USE 3 IMUs ##
         # result, sensor = omni.kit.commands.execute(

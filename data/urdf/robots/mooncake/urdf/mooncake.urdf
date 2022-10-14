@@ -7,6 +7,7 @@
   <!--Lower plate-->
   <link name="base_plate">
     <visual>
+      <origin rpy="0 0 0"/>
       <geometry>
         <mesh filename="package://meshes/lower_plate.dae" scale="1 1 1"/>
       </geometry>
@@ -44,7 +45,7 @@
     </inertial>
   </link>
   <joint name="upper_plate_joint" type="fixed">
-    <origin xyz="0 0 0.1685"/>
+    <origin rpy="0 0 0" xyz="0 0 0.1685"/>
     <parent link="base_plate"/>
     <child link="upper_plate"/>
   </joint>
@@ -373,7 +374,7 @@
   </link>
   <joint name="wheel_0_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_0"/>
     <child link="wheel_0"/>
   </joint>
@@ -768,7 +769,7 @@
   </link>
   <joint name="wheel_1_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_1"/>
     <child link="wheel_1"/>
   </joint>
@@ -1163,7 +1164,7 @@
   </link>
   <joint name="wheel_2_joint" type="continuous">
     <origin rpy="0 0 0" xyz="0 0 -0.10666"/>
-    <axis xyz="0 0 1"/>
+    <axis xyz="0 0 -1"/>
     <parent link="motor_2"/>
     <child link="wheel_2"/>
   </joint>
